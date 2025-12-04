@@ -1,0 +1,33 @@
+{
+  "name": "qwen-web",
+  "version": "1.1.3",
+  "description": "Run Qwen LLMs locally in your browser with WebGPU. Zero installation, instant AI chat.",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "next dev -p 10000",
+    "build": "next build",
+    "start": "next start -p 10000",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^3.8.0",
+    "@vercel/analytics": "^1.5.0",
+    "next": "^15.1.3",
+    "onnxruntime-web": "^1.21.0-dev",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sass": "1.83.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.12.0",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.2",
+    "node-loader": "^2.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  }
+}
