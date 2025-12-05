@@ -1,7 +1,9 @@
 'use client';
 
 import { Component, ErrorInfo, ReactNode } from 'react';
-import styles from './ErrorBoundary.module.scss';
+import { AlertTriangle } from 'lucide-react';
+import { Button } from '@root/components/ui/button';
+import { Card, CardContent } from '@root/components/ui/card';
 
 interface Props {
     children: ReactNode;
@@ -45,15 +47,25 @@ export class ErrorBoundary extends Component<Props, State> {
 
             // Default error UI
             return (
-                <div className={styles.container} role="alert">
-                    <div className={styles.icon}>⚠️</div>
-                    <h2 className={styles.title}>Something went wrong</h2>
-                    <p className={styles.message}>
-                        {this.state.error?.message || 'An unexpected error occurred'}
-                    </p>
-                    <button onClick={this.handleRetry} className={styles.retryButton}>
-                        Try again
-                    </button>
+                <div className="flex min-h-screen items-center justify-center p-4" role="alert">
+                    <Card className="max-w-md border-destructive/50 bg-destructive/5">
+                        <CardContent className="flex flex-col items-center gap-4 p-6 text-center">
+                            <div className="flex size-12 items-center justify-center rounded-full bg-destructive/10">
+                                <AlertTriangle className="size-6 text-destructive" />
+                            </div>
+                            <div className="space-y-2">
+                                <h2 className="text-lg font-semibold text-foreground">
+                                    Something went wrong
+                                </h2>
+                                <p className="text-sm text-muted-foreground">
+                                    {this.state.error?.message || 'An unexpected error occurred'}
+                                </p>
+                            </div>
+                            <Button onClick={this.handleRetry} variant="outline">
+                                Try again
+                            </Button>
+                        </CardContent>
+                    </Card>
                 </div>
             );
         }

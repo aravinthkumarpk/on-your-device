@@ -1,6 +1,5 @@
 import { Analytics } from '@vercel/analytics/react';
 import { Metadata } from 'next';
-import '@root/global.scss';
 import './globals.css';
 
 export const metadata: Metadata = {
