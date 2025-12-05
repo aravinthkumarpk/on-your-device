@@ -10,6 +10,15 @@ Qwen-Web is a WebGPU-powered browser application that runs the Qwen3-0.6B langua
 2. **Responsive UI**: Web Worker isolates heavy computation from the main thread
 3. **Progressive loading**: Model downloads with real-time progress feedback
 
+### Key Dependencies & Credits
+
+This project relies on:
+
+- **[Transformers.js](https://github.com/xenova/transformers.js)** by [Xenova](https://github.com/xenova) - Core library for running ML models in browser
+- **[ONNX Community](https://huggingface.co/onnx-community)** - Optimized ONNX model repository
+- **[WebML Community](https://huggingface.co/webml-community)** - Web-optimized ML models and demos
+- Original implementation: [sdan/qwen-web](https://github.com/sdan/qwen-web)
+
 ## Development Commands
 
 ```bash

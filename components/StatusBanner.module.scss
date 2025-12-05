@@ -1,0 +1,71 @@
+.error {
+  padding: 15px;
+  background-color: #fee;
+  border: 1px solid #fcc;
+  border-radius: 8px;
+  margin-bottom: 20px;
+
+  strong {
+    color: #c00;
+  }
+
+  p {
+    margin: 5px 0 0 0;
+    font-size: 14px;
+  }
+}
+
+.loading {
+  padding: 15px;
+  background-color: #e3f2fd;
+  border: 1px solid #90caf9;
+  border-radius: 8px;
+  margin-bottom: 20px;
+
+  strong {
+    color: #1565c0;
+  }
+}
+
+.progressContainer {
+  margin-top: 10px;
+}
+
+.fileName {
+  font-size: 12px;
+  margin-bottom: 5px;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.progressBar {
+  width: 100%;
+  height: 8px;
+  background-color: #ddd;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background-color: #1976d2;
+  transition: width 0.3s ease;
+}
+
+.progressPercent {
+  font-size: 12px;
+  margin-top: 5px;
+  color: #666;
+}
+
+.ready {
+  padding: 10px 15px;
+  background-color: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: #2e7d32;
+}

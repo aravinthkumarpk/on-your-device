@@ -116,12 +116,34 @@ npm start
 }
 ```
 
-## Credits
+## Credits & Acknowledgements
 
-- Original project: [sdan/qwen-web](https://github.com/sdan/qwen-web)
-- Model: [Qwen3-0.6B-ONNX](https://huggingface.co/onnx-community/Qwen3-0.6B-ONNX)
-- Framework: [Transformers.js](https://huggingface.co/docs/transformers.js)
+This project is made possible by the WebML community:
+
+### Core Libraries
+
+| Project | Author | Description |
+|---------|--------|-------------|
+| [Transformers.js](https://github.com/xenova/transformers.js) | [Xenova](https://github.com/xenova) | Run 🤗 Transformers in your browser |
+| [ONNX Runtime Web](https://github.com/microsoft/onnxruntime) | Microsoft | Optimized ML inference engine |
+
+### Model Sources
+
+| Model | Source | Format |
+|-------|--------|--------|
+| [Qwen3-0.6B-ONNX](https://huggingface.co/onnx-community/Qwen3-0.6B-ONNX) | [ONNX Community](https://huggingface.co/onnx-community) | q4f16 quantized |
+
+### Community Resources
+
+- 🌐 [Xenova's GitHub](https://github.com/xenova) - More WebML projects and demos
+- 🤗 [WebML Community Spaces](https://huggingface.co/webml-community/spaces) - Collection of web-based ML demos
+- 📚 [Transformers.js Docs](https://huggingface.co/docs/transformers.js) - Official documentation
+
+### Original Project
+
+- Implementation based on [sdan/qwen-web](https://github.com/sdan/qwen-web)
 
 ## License
 
 MIT License - See LICENSE.md for details
+

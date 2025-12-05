@@ -63,6 +63,29 @@ Safari support is in development.
 
 MIT
 
-## Credits
+## Credits & Acknowledgements
 
-Based on [qwen-web](https://github.com/sdan/qwen-web) by sdan.
+This project builds on the incredible work of the WebML community:
+
+### Core Technologies
+
+- **[Transformers.js](https://github.com/xenova/transformers.js)** by [Xenova](https://github.com/xenova) - The library that makes running ML models in the browser possible. Transformers.js provides a JavaScript implementation of the Hugging Face Transformers API.
+
+- **[ONNX Community Models](https://huggingface.co/onnx-community)** - Optimized ONNX versions of popular models for web deployment
+
+- **[WebML Community](https://huggingface.co/webml-community)** - Community-contributed web-optimized models and demos
+
+### Model
+
+- **[Qwen3-0.6B-ONNX](https://huggingface.co/onnx-community/Qwen3-0.6B-ONNX)** - Quantized ONNX version of Alibaba's Qwen3-0.6B model
+
+### Original Implementation
+
+- Based on [qwen-web](https://github.com/sdan/qwen-web) by [sdan](https://github.com/sdan)
+
+### Resources
+
+- [Xenova's GitHub](https://github.com/xenova) - More WebML projects and examples
+- [WebML Community Spaces](https://huggingface.co/webml-community/spaces) - Demo applications
+- [Transformers.js Documentation](https://huggingface.co/docs/transformers.js)
+

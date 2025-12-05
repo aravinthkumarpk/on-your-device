@@ -6,13 +6,18 @@ import {
   InterruptableStoppingCriteria,
 } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.0";
 
-console.log('Imported dependencies');
+// Debug logger - only outputs when DEBUG is true
+// Set to false for production to reduce console noise
+const DEBUG = false;
+const log = (...args) => DEBUG && console.log('[Worker]', ...args);
+
+log('Imported dependencies');
 
 async function check() {
-  console.log('Running WebGPU check');
+  log('Running WebGPU check');
   try {
     const adapter = await navigator.gpu.requestAdapter();
-    console.log('Got adapter:', adapter);
+    log('Got adapter:', adapter);
     if (!adapter) {
       throw new Error("WebGPU is not supported (no adapter found)");
     }
@@ -29,19 +34,19 @@ class TextGenerationPipeline {
   static model_id = "onnx-community/Qwen3-0.6B-ONNX";
 
   static async getInstance(progress_callback = null) {
-    console.log('Getting pipeline instance');
+    log('Getting pipeline instance');
     try {
       this.tokenizer ??= await AutoTokenizer.from_pretrained(this.model_id, {
         progress_callback,
       });
-      console.log('Tokenizer loaded successfully');
+      log('Tokenizer loaded successfully');
 
       this.model ??= await AutoModelForCausalLM.from_pretrained(this.model_id, {
         dtype: "q4f16",
         device: "webgpu",
         progress_callback,
       });
-      console.log('Model loaded successfully');
+      log('Model loaded successfully');
 
       return [this.tokenizer, this.model];
     } catch (error) {
@@ -70,15 +75,15 @@ const stopping_criteria = new InterruptableStoppingCriteria();
 let past_key_values_cache = null;
 
 async function generate(messages) {
-  console.log('Starting generation with messages:', messages);
+  log('Starting generation with messages:', messages);
   const [tokenizer, model] = await TextGenerationPipeline.getInstance();
-  console.log('Got tokenizer and model instances');
+  log('Got tokenizer and model instances');
 
   const inputs = tokenizer.apply_chat_template(messages, {
     add_generation_prompt: true,
     return_dict: true,
   });
-  console.log('Applied chat template:', inputs);
+  log('Applied chat template:', inputs);
 
   let state = "thinking";
   let startTime;
@@ -87,16 +92,16 @@ async function generate(messages) {
   let rawBuffer = "";
 
   const token_callback_function = (tokens) => {
-    console.log('Token callback:', tokens);
+    log('Token callback:', tokens);
     startTime ??= performance.now();
     if (numTokens++ > 0) {
       tps = (numTokens / (performance.now() - startTime)) * 1000;
-      console.log('Current TPS:', tps);
+      log('Current TPS:', tps);
     }
   };
 
   const callback_function = (output) => {
-    console.log('Output callback:', output);
+    log('Output callback:', output);
     rawBuffer += output;
 
     // Split thinking vs answer based on <think> ... </think>
@@ -135,7 +140,7 @@ async function generate(messages) {
     callback_function,
     token_callback_function,
   });
-  console.log('Created streamer');
+  log('Created streamer');
 
   self.postMessage({ status: "start" });
 
@@ -147,24 +152,24 @@ async function generate(messages) {
     stopping_criteria,
     return_dict_in_generate: true,
   });
-  console.log('Generation complete:', sequences);
+  log('Generation complete:', sequences);
 
   past_key_values_cache = past_key_values;
 
   const decoded = tokenizer.batch_decode(sequences, { skip_special_tokens: true });
-  console.log('Decoded output:', decoded);
+  log('Decoded output:', decoded);
   self.postMessage({ status: "complete", output: decoded });
 }
 
 function handleProgress(event) {
-  console.log('Progress event:', event);
+  log('Progress event:', event);
   if (!event.total) return;
 
   const friendlyName = "Qwen3-0.6B-ONNX";
   const fileLabel = event.url || friendlyName;
 
   if (event.loaded === 0) {
-    console.log('Starting file load:', event.url);
+    log('Starting file load:', event.url);
     self.postMessage({
       status: "initiate",
       file: fileLabel,
@@ -173,7 +178,7 @@ function handleProgress(event) {
     });
   } else if (event.loaded < event.total) {
     const percent = Math.round((event.loaded / event.total) * 100);
-    console.log(`Loading progress: ${percent}%`);
+    log(`Loading progress: ${percent}%`);
     self.postMessage({
       status: "progress",
       file: fileLabel,
@@ -181,7 +186,7 @@ function handleProgress(event) {
       total: 100,
     });
   } else {
-    console.log('File load complete:', event.url);
+    log('File load complete:', event.url);
     self.postMessage({
       status: "done",
       file: fileLabel,
@@ -190,14 +195,14 @@ function handleProgress(event) {
 }
 
 async function load() {
-  console.log('Starting model load');
+  log('Starting model load');
   self.postMessage({ status: "loading", data: "Checking WebGPU support..." });
 
   try {
     // First check for WebGPU support
-    console.log('Running WebGPU check');
+    log('Running WebGPU check');
     const adapter = await navigator.gpu.requestAdapter();
-    console.log('Got adapter:', adapter);
+    log('Got adapter:', adapter);
     if (!adapter) {
       throw new Error("WebGPU is not supported (no adapter found)");
     }
@@ -206,13 +211,13 @@ async function load() {
     self.postMessage({ status: "loading", data: "Loading Qwen3-0.6B-ONNX..." });
 
     const [tokenizer, model] = await TextGenerationPipeline.getInstance(handleProgress);
-    console.log('Model loaded successfully');
+    log('Model loaded successfully');
 
     self.postMessage({ status: "loading", data: "Compiling shaders and warming up model..." });
     const inputs = tokenizer("a");
-    console.log('Warmup inputs:', inputs);
+    log('Warmup inputs:', inputs);
     await model.generate({ ...inputs, max_new_tokens: 1 });
-    console.log('Warmup complete');
+    log('Warmup complete');
     self.postMessage({ status: "ready" });
   } catch (error) {
     console.error('Model load failed:', error);
@@ -226,7 +231,7 @@ async function load() {
 
 self.addEventListener("message", async (e) => {
   const { type, data } = e.data;
-  console.log('Received message:', type, data);
+  log('Received message:', type, data);
 
   switch (type) {
     case "check":
@@ -240,11 +245,11 @@ self.addEventListener("message", async (e) => {
       generate(data);
       break;
     case "interrupt":
-      console.log('Interrupting generation');
+      log('Interrupting generation');
       stopping_criteria.interrupt();
       break;
     case "reset":
-      console.log('Resetting state');
+      log('Resetting state');
       past_key_values_cache = null;
       stopping_criteria.reset();
       break;

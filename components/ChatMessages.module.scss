@@ -1,0 +1,92 @@
+.container {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.empty {
+    color: #999;
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.message {
+    margin-bottom: 15px;
+    padding: 12px;
+    border-radius: 8px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.user {
+    background-color: #f5f5f5;
+}
+
+.assistant {
+    background-color: #e3f2fd;
+}
+
+.system {
+    background-color: #fff3e0;
+    font-style: italic;
+}
+
+.streaming {
+    border: 1px solid #90caf9;
+}
+
+.role {
+    font-weight: 600;
+    margin-bottom: 5px;
+    font-size: 14px;
+    color: #333;
+}
+
+.content {
+    white-space: pre-wrap;
+    font-size: 14px;
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+.thought {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 8px;
+    font-style: italic;
+    padding: 8px;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+    border-left: 3px solid #90caf9;
+}
+
+.cursor {
+    animation: blink 1s infinite;
+    margin-left: 2px;
+}
+
+@keyframes blink {
+
+    0%,
+    50% {
+        opacity: 1;
+    }
+
+    51%,
+    100% {
+        opacity: 0;
+    }
+}
+
+.tps {
+    font-size: 12px;
+    color: #666;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #ddd;
+}
