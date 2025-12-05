@@ -4,10 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useWebGPU } from './hooks/useWebGPU';
 import { useWorker, Message } from './hooks/useWorker';
 import { StatusBanner } from '@components/StatusBanner';
-import { ChatMessages } from '@components/ChatMessages';
-import { ChatInput } from '@components/ChatInput';
+import { ChatContainer } from '@components/ChatContainer';
+import { ChatInputBar } from '@components/ChatInputBar';
 import { ErrorBoundary } from '@components/ErrorBoundary';
-import styles from './page.module.scss';
 
 export const dynamic = 'force-static';
 
@@ -46,42 +45,53 @@ export default function Page() {
 
   return (
     <ErrorBoundary>
-      <div className={styles.container}>
+      <div className="flex h-screen flex-col overflow-hidden bg-gradient-to-b from-background to-secondary/20">
         {/* Header */}
-        <header className={styles.header}>
-          <h1 className={styles.title}>Qwen-Web</h1>
-          <p className={styles.subtitle}>
-            Run Qwen3-0.6B locally in your browser with WebGPU
-          </p>
+        <header className="shrink-0 border-b border-border/40 bg-background/80 px-4 py-4 backdrop-blur-xl">
+          <div className="mx-auto max-w-3xl text-center">
+            <h1 className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-2xl font-bold tracking-tight text-transparent">
+              Qwen-Web
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Run Qwen3-0.6B locally in your browser with WebGPU
+            </p>
+          </div>
         </header>
 
         {/* Status banner (loading/error/ready) */}
-        <StatusBanner
-          status={worker.status}
-          progress={worker.progress}
-          webGPUSupported={webGPU.isSupported}
-          error={worker.error}
-        />
+        <div className="shrink-0">
+          <StatusBanner
+            status={worker.status}
+            progress={worker.progress}
+            webGPUSupported={webGPU.isSupported}
+            error={worker.error}
+          />
+        </div>
 
-        {/* Chat messages */}
-        <ChatMessages
+        {/* Chat container - this is the scrollable area */}
+        <ChatContainer
           messages={messages}
           isGenerating={worker.generation.isGenerating}
           currentResponse={worker.generation.currentResponse}
           thought={worker.generation.thought}
           tps={worker.generation.tps}
+          onSend={handleSend}
+          onInterrupt={worker.interrupt}
         />
 
-        {/* Input controls */}
-        <ChatInput
-          onSend={handleSend}
-          onClear={handleClear}
-          onInterrupt={worker.interrupt}
-          disabled={isDisabled}
-          isGenerating={worker.generation.isGenerating}
-          hasMessages={messages.length > 0}
-        />
+        {/* Input controls - fixed at bottom */}
+        <div className="shrink-0">
+          <ChatInputBar
+            onSend={handleSend}
+            onClear={handleClear}
+            onInterrupt={worker.interrupt}
+            disabled={isDisabled}
+            isGenerating={worker.generation.isGenerating}
+            hasMessages={messages.length > 0}
+          />
+        </div>
       </div>
     </ErrorBoundary>
   );
 }
+
