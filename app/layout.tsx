@@ -1,7 +1,14 @@
 import { Analytics } from '@vercel/analytics/react';
 import { Metadata } from 'next';
+import { Outfit } from 'next/font/google';
 import '@root/global.scss';
 import './globals.css';
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  variable: '--font-outfit',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'qwen-web',
@@ -26,8 +33,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-us" className="dark">
-      <body className="min-h-screen bg-background text-foreground antialiased">
+    <html lang="en-us" className="dark" suppressHydrationWarning>
+      <body className={`min-h-screen bg-background text-foreground antialiased ${outfit.variable} font-sans`}>
         {children}
         <Analytics />
       </body>

@@ -25,6 +25,7 @@ import { Suggestion, Suggestions } from '@root/components/ai-elements/suggestion
 import { CopyIcon, ThumbsUpIcon, StopCircleIcon, SparklesIcon, Zap } from 'lucide-react';
 import { type Message as ChatMessage } from '@root/app/hooks/useWorker';
 import { cn } from '@root/lib/utils';
+import { motion, AnimatePresence } from 'motion/react';
 
 export interface ChatContainerProps {
     messages: ChatMessage[];
@@ -125,7 +126,7 @@ export function ChatContainer({
 
     return (
         <Conversation className="flex-1">
-            <ConversationContent className="mx-auto max-w-3xl px-4 pb-4">
+            <ConversationContent className="mx-auto max-w-4xl px-4 pb-4">
                 {isEmpty ? (
                     <ConversationEmptyState
                         title="Start a conversation"
@@ -148,51 +149,66 @@ export function ChatContainer({
                 ) : (
                     <div className="space-y-6">
                         {/* Render all messages */}
-                        {messages.map((message, index) => {
-                            const isAssistant = message.role === 'assistant';
-                            const parsed = isAssistant
-                                ? parseMessageContent(message.content)
-                                : { thinking: '', response: message.content };
+                        <AnimatePresence initial={false}>
+                            {messages.map((message, index) => {
+                                const isAssistant = message.role === 'assistant';
+                                const parsed = isAssistant
+                                    ? parseMessageContent(message.content)
+                                    : { thinking: '', response: message.content };
 
-                            return (
-                                <Message key={index} from={message.role}>
-                                    <MessageContent
-                                        className={cn(
-                                            message.role === 'user' && 'bg-primary text-primary-foreground rounded-2xl rounded-tr-sm'
-                                        )}
+                                return (
+                                    <motion.div
+                                        key={index}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.3, ease: "easeOut" }}
                                     >
-                                        {/* Show thinking in collapsible for assistant messages */}
-                                        {isAssistant && parsed.thinking && (
-                                            <Reasoning isStreaming={false} defaultOpen={false}>
-                                                <ReasoningTrigger />
-                                                <ReasoningContent>{cleanTags(parsed.thinking)}</ReasoningContent>
-                                            </Reasoning>
-                                        )}
-                                        <MessageResponse>{cleanTags(parsed.response)}</MessageResponse>
-                                    </MessageContent>
-                                    {isAssistant && (
-                                        <MessageToolbar>
-                                            <MessageActions>
-                                                <MessageAction
-                                                    tooltip="Copy"
-                                                    onClick={() => handleCopy(parsed.response)}
-                                                >
-                                                    <CopyIcon className="size-4" />
-                                                </MessageAction>
-                                                <MessageAction tooltip="Like">
-                                                    <ThumbsUpIcon className="size-4" />
-                                                </MessageAction>
-                                            </MessageActions>
-                                        </MessageToolbar>
-                                    )}
-                                </Message>
-                            );
-                        })}
+                                        <Message from={message.role}>
+                                            <MessageContent
+                                                className={cn(
+                                                    "shadow-sm",
+                                                    message.role === 'user' && 'bg-primary text-primary-foreground rounded-2xl rounded-tr-sm shadow-md'
+                                                )}
+                                            >
+                                                {/* Show thinking in collapsible for assistant messages */}
+                                                {isAssistant && parsed.thinking && (
+                                                    <Reasoning isStreaming={false} defaultOpen={false}>
+                                                        <ReasoningTrigger />
+                                                        <ReasoningContent>{cleanTags(parsed.thinking)}</ReasoningContent>
+                                                    </Reasoning>
+                                                )}
+                                                <MessageResponse>{cleanTags(parsed.response)}</MessageResponse>
+                                            </MessageContent>
+                                            {isAssistant && (
+                                                <MessageToolbar>
+                                                    <MessageActions>
+                                                        <MessageAction
+                                                            tooltip="Copy"
+                                                            onClick={() => handleCopy(parsed.response)}
+                                                        >
+                                                            <CopyIcon className="size-4" />
+                                                        </MessageAction>
+                                                        <MessageAction tooltip="Like">
+                                                            <ThumbsUpIcon className="size-4" />
+                                                        </MessageAction>
+                                                    </MessageActions>
+                                                </MessageToolbar>
+                                            )}
+                                        </Message>
+                                    </motion.div>
+                                );
+                            })}
+                        </AnimatePresence>
 
                         {/* Show streaming response */}
                         {isGenerating && (
-                            <Message from="assistant">
-                                <MessageContent>
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                <Message from="assistant">
+                                    <MessageContent className="shadow-sm">
                                     {/* Show thinking/reasoning if present */}
                                     {cleanedThought && (
                                         <Reasoning isStreaming={isGenerating}>
@@ -218,22 +234,23 @@ export function ChatContainer({
                                             <span>{tps.toFixed(1)} tokens/sec</span>
                                         </div>
                                     )}
-                                </MessageContent>
+                                    </MessageContent>
 
-                                <MessageToolbar>
-                                    <MessageActions>
-                                        <MessageAction
-                                            tooltip="Stop generating"
-                                            onClick={onInterrupt}
-                                            variant="outline"
-                                            className="text-destructive hover:text-destructive"
-                                        >
-                                            <StopCircleIcon className="size-4" />
-                                            <span className="ml-1 text-xs">Stop</span>
-                                        </MessageAction>
-                                    </MessageActions>
-                                </MessageToolbar>
-                            </Message>
+                                    <MessageToolbar>
+                                        <MessageActions>
+                                            <MessageAction
+                                                tooltip="Stop generating"
+                                                onClick={onInterrupt}
+                                                variant="outline"
+                                                className="text-destructive hover:text-destructive"
+                                            >
+                                                <StopCircleIcon className="size-4" />
+                                                <span className="ml-1 text-xs">Stop</span>
+                                            </MessageAction>
+                                        </MessageActions>
+                                    </MessageToolbar>
+                                </Message>
+                            </motion.div>
                         )}
                     </div>
                 )}
