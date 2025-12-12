@@ -19,7 +19,7 @@ export function StatusBanner({ status, progress, webGPUSupported, error }: Statu
     // WebGPU not supported error
     if (webGPUSupported === false) {
         return (
-            <div className="mx-auto max-w-3xl px-4 pt-4">
+            <div className="mx-auto max-w-4xl px-4 pt-4">
                 <Card className="border-destructive/50 bg-destructive/10">
                     <CardContent className="flex items-center gap-3 p-4">
                         <AlertCircle className="size-5 text-destructive" />
@@ -38,7 +38,7 @@ export function StatusBanner({ status, progress, webGPUSupported, error }: Statu
     // Generic error state
     if (status === 'error') {
         return (
-            <div className="mx-auto max-w-3xl px-4 pt-4">
+            <div className="mx-auto max-w-4xl px-4 pt-4">
                 <Card className="border-destructive/50 bg-destructive/10">
                     <CardContent className="flex items-center gap-3 p-4">
                         <AlertCircle className="size-5 text-destructive" />
@@ -57,7 +57,7 @@ export function StatusBanner({ status, progress, webGPUSupported, error }: Statu
     // Loading state with progress
     if (status === 'loading') {
         return (
-            <div className="mx-auto max-w-3xl px-4 pt-4">
+            <div className="mx-auto max-w-4xl px-4 pt-4">
                 <Card className="border-primary/20 bg-primary/5">
                     <CardContent className="p-4">
                         <div className="flex items-center gap-3">
@@ -89,8 +89,8 @@ export function StatusBanner({ status, progress, webGPUSupported, error }: Statu
     // Ready state - minimal, inline indicator
     if (status === 'ready') {
         return (
-            <div className="mx-auto max-w-3xl px-4 pt-4">
-                <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-4 py-2">
+            <div className="mx-auto max-w-4xl px-4 pt-4">
+                <div className="flex w-fit items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-4 py-2">
                     <CheckCircle2 className="size-4 text-emerald-500" />
                     <span className="text-sm font-medium text-emerald-500">Model ready</span>
                 </div>

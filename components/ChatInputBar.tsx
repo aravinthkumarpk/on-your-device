@@ -42,7 +42,7 @@ export function ChatInputBar({
 
     return (
         <div className="w-full border-t border-border/40 bg-background/95 p-4 backdrop-blur-xl">
-            <div className="mx-auto max-w-3xl">
+            <div className="mx-auto max-w-4xl">
                 <PromptInput
                     onSubmit={handleSubmit}
                     className="rounded-2xl border border-border/50 bg-secondary/30 p-2 shadow-lg transition-all focus-within:border-primary/30 focus-within:shadow-xl"

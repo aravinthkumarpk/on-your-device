@@ -48,7 +48,7 @@ export default function Page() {
       <div className="flex h-screen flex-col overflow-hidden bg-gradient-to-b from-background to-secondary/20">
         {/* Header */}
         <header className="shrink-0 border-b border-border/40 bg-background/80 px-4 py-4 backdrop-blur-xl">
-          <div className="mx-auto max-w-3xl text-center">
+          <div className="mx-auto max-w-4xl text-center">
             <h1 className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-2xl font-bold tracking-tight text-transparent">
               Qwen-Web
             </h1>
@@ -60,12 +60,14 @@ export default function Page() {
 
         {/* Status banner (loading/error/ready) */}
         <div className="shrink-0">
-          <StatusBanner
-            status={worker.status}
-            progress={worker.progress}
-            webGPUSupported={webGPU.isSupported}
-            error={worker.error}
-          />
+          <div className="mx-auto max-w-4xl">
+            <StatusBanner
+              status={worker.status}
+              progress={worker.progress}
+              webGPUSupported={webGPU.isSupported}
+              error={worker.error}
+            />
+          </div>
         </div>
 
         {/* Chat container - this is the scrollable area */}
