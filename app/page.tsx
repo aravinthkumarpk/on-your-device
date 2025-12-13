@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useWebGPU } from './hooks/useWebGPU';
 import { useWorker, Message } from './hooks/useWorker';
 import { ChatContainer } from '@components/ChatContainer';
 import { ChatInputBar } from '@components/ChatInputBar';
@@ -16,7 +15,6 @@ export const dynamic = 'force-static';
  * Uses custom hooks for WebGPU detection and worker communication
  */
 export default function Page() {
-  const webGPU = useWebGPU();
   const worker = useWorker();
   const [messages, setMessages] = useState<Message[]>([]);
 

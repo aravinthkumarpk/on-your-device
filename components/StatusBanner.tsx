@@ -2,7 +2,7 @@
 
 import { WorkerProgress, WorkerStatus } from '../app/hooks/useWorker';
 import { Card, CardContent } from '@root/components/ui/card';
-import { CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 interface StatusBannerProps {
     status: WorkerStatus;
