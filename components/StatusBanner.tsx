@@ -54,50 +54,29 @@ export function StatusBanner({ status, progress, webGPUSupported, error }: Statu
         );
     }
 
-    // Loading state with progress
-    if (status === 'loading') {
+    // Loading state - only show progress bar if downloading, header shows loading status
+    if (status === 'loading' && progress) {
         return (
             <div className="mx-auto max-w-4xl px-4 pt-4">
-                <Card className="border-primary/20 bg-primary/5">
-                    <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                            <Loader2 className="size-5 animate-spin text-primary" />
-                            <div className="flex-1">
-                                <p className="font-semibold text-foreground">Loading model...</p>
-                                {progress && (
-                                    <div className="mt-2 space-y-1">
-                                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                            <span className="truncate">{progress.file}</span>
-                                            <span className="ml-2 font-mono">{progress.progress}%</span>
-                                        </div>
-                                        <div className="h-2 overflow-hidden rounded-full bg-secondary">
-                                            <div
-                                                className="h-full rounded-full bg-primary transition-all duration-300"
-                                                style={{ width: `${progress.progress}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                    <div className="space-y-1">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span className="truncate">{progress.file}</span>
+                            <span className="ml-2 font-mono">{progress.progress}%</span>
                         </div>
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
-
-    // Ready state - minimal, inline indicator
-    if (status === 'ready') {
-        return (
-            <div className="mx-auto max-w-4xl px-4 pt-4">
-                <div className="flex w-fit items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-4 py-2">
-                    <CheckCircle2 className="size-4 text-emerald-500" />
-                    <span className="text-sm font-medium text-emerald-500">Model ready</span>
+                        <div className="h-2 overflow-hidden rounded-full bg-secondary">
+                            <div
+                                className="h-full rounded-full bg-primary transition-all duration-300"
+                                style={{ width: `${progress.progress}%` }}
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
         );
     }
 
+    // Ready state - now shown in header via ModelSelector, no banner needed
     // Initializing (no display needed)
     return null;
 }

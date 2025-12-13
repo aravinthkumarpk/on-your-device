@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWebGPU } from './hooks/useWebGPU';
 import { useWorker, Message } from './hooks/useWorker';
-import { StatusBanner } from '@components/StatusBanner';
 import { ChatContainer } from '@components/ChatContainer';
 import { ChatInputBar } from '@components/ChatInputBar';
 import { ErrorBoundary } from '@components/ErrorBoundary';
+import { ThemeToggle } from '@root/components/theme-toggle';
+import { ModelSelector } from '@root/components/ModelSelector';
 
 export const dynamic = 'force-static';
 
@@ -45,30 +46,32 @@ export default function Page() {
 
   return (
     <ErrorBoundary>
-      <div className="flex h-screen flex-col overflow-hidden bg-gradient-to-b from-background to-secondary/20">
+      <div className="flex h-screen flex-col bg-gradient-to-b from-background to-secondary/20">
         {/* Header */}
         <header className="shrink-0 border-b border-border/40 bg-background/80 px-4 py-4 backdrop-blur-xl">
-          <div className="mx-auto max-w-4xl text-center">
-            <h1 className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-2xl font-bold tracking-tight text-transparent">
-              Qwen-Web
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Run Qwen3-0.6B locally in your browser with WebGPU
-            </p>
+          <div className="mx-auto flex max-w-4xl items-center justify-between gap-4">
+            {/* Left: Title */}
+            <div className="flex flex-col">
+              <h1 className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-2xl font-bold tracking-tight text-transparent">
+                OnYourDevice
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Run AI models locally in your browser with WebGPU
+              </p>
+            </div>
+
+            {/* Right: Model Selector + Theme Toggle */}
+            <div className="flex items-center gap-3">
+              <ModelSelector
+                status={worker.status}
+                modelName="Qwen3-0.6B"
+                error={worker.error ?? undefined}
+                progress={worker.progress}
+              />
+              <ThemeToggle />
+            </div>
           </div>
         </header>
-
-        {/* Status banner (loading/error/ready) */}
-        <div className="shrink-0">
-          <div className="mx-auto max-w-4xl">
-            <StatusBanner
-              status={worker.status}
-              progress={worker.progress}
-              webGPUSupported={webGPU.isSupported}
-              error={worker.error}
-            />
-          </div>
-        </div>
 
         {/* Chat container - this is the scrollable area */}
         <ChatContainer
@@ -96,4 +99,3 @@ export default function Page() {
     </ErrorBoundary>
   );
 }
-

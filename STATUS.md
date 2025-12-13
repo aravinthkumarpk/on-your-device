@@ -2,7 +2,7 @@
 
 ## ✅ Fixed and Ready to Use
 
-The Qwen-Web replication is now fully functional with the worker loading issue resolved.
+The OnYourDevice application is now fully functional with the worker loading issue resolved.
 
 ### What Was Fixed
 

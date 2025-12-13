@@ -1,6 +1,6 @@
-# Qwen-Web
+# OnYourDevice
 
-Run Qwen3-0.6B locally in your browser with WebGPU. Zero installation, instant AI chat.
+Run AI models locally in your browser with WebGPU. Zero installation, instant AI chat.
 
 ## Features
 

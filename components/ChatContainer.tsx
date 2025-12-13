@@ -209,31 +209,31 @@ export function ChatContainer({
                             >
                                 <Message from="assistant">
                                     <MessageContent className="shadow-sm">
-                                    {/* Show thinking/reasoning if present */}
-                                    {cleanedThought && (
-                                        <Reasoning isStreaming={isGenerating}>
-                                            <ReasoningTrigger />
-                                            <ReasoningContent>{cleanedThought}</ReasoningContent>
-                                        </Reasoning>
-                                    )}
+                                        {/* Show thinking/reasoning if present */}
+                                        {cleanedThought && (
+                                            <Reasoning isStreaming={isGenerating}>
+                                                <ReasoningTrigger />
+                                                <ReasoningContent>{cleanedThought}</ReasoningContent>
+                                            </Reasoning>
+                                        )}
 
-                                    {/* Show current response or loader */}
-                                    {currentResponse ? (
-                                        <MessageResponse>{currentResponse}</MessageResponse>
-                                    ) : !cleanedThought && (
-                                        <div className="flex items-center gap-2 text-muted-foreground">
-                                            <Loader size={16} />
-                                            <span className="text-sm">Generating...</span>
-                                        </div>
-                                    )}
+                                        {/* Show current response or loader */}
+                                        {currentResponse ? (
+                                            <MessageResponse>{currentResponse}</MessageResponse>
+                                        ) : !cleanedThought && (
+                                            <div className="flex items-center gap-2 text-muted-foreground">
+                                                <Loader size={16} />
+                                                <span className="text-sm">Generating...</span>
+                                            </div>
+                                        )}
 
-                                    {/* Show TPS indicator */}
-                                    {tps !== null && tps > 0 && (
-                                        <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-                                            <Zap className="size-3" />
-                                            <span>{tps.toFixed(1)} tokens/sec</span>
-                                        </div>
-                                    )}
+                                        {/* Show TPS indicator */}
+                                        {tps !== null && tps > 0 && (
+                                            <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+                                                <Zap className="size-3" />
+                                                <span>{tps.toFixed(1)} tokens/sec</span>
+                                            </div>
+                                        )}
                                     </MessageContent>
 
                                     <MessageToolbar>
@@ -245,7 +245,6 @@ export function ChatContainer({
                                                 className="text-destructive hover:text-destructive"
                                             >
                                                 <StopCircleIcon className="size-4" />
-                                                <span className="ml-1 text-xs">Stop</span>
                                             </MessageAction>
                                         </MessageActions>
                                     </MessageToolbar>

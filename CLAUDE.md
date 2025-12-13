@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Qwen-Web is a WebGPU-powered browser application that runs the Qwen3-0.6B language model entirely client-side. The architecture is designed around three key principles:
+OnYourDevice is a WebGPU-powered browser application that runs AI language models entirely client-side. The architecture is designed around three key principles:
 
 1. **Zero-server inference**: All ML operations happen in the browser using WebGPU
 2. **Responsive UI**: Web Worker isolates heavy computation from the main thread

@@ -22,7 +22,9 @@ import {
 } from "lucide-react";
 import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
 import { createContext, memo, useContext, useEffect, useState } from "react";
-import { Streamdown } from "streamdown";
+import { CodeBlock, CodeBlockCopyButton } from "./code-block";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: UIMessage["role"];
@@ -305,17 +307,51 @@ export const MessageBranchPage = ({
   );
 };
 
-export type MessageResponseProps = ComponentProps<typeof Streamdown>;
+export type MessageResponseProps = ComponentProps<"div">;
 
 export const MessageResponse = memo(
-  ({ className, ...props }: MessageResponseProps) => (
-    <Streamdown
-      className={cn(
-        "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
-        className
-      )}
-      {...props}
-    />
+  ({ className, children, ...props }: MessageResponseProps) => (
+    <div className={cn("max-w-none break-words text-sm leading-relaxed", className)} {...props}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          code({ node, className, children, ...props }) {
+            const match = /language-(\w+)/.exec(className || "");
+            // Check if it's an inline code block or a block
+            // react-markdown passes inline boolean as prop, but types might be loose
+            // @ts-expect-error - react-markdown passes inline prop
+            const isInline = props.inline;
+
+            if (!isInline && match) {
+              return (
+                <CodeBlock
+                  code={String(children).replace(/\n$/, "")}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  language={match[1] as any}
+                  className="my-4"
+                >
+                  <CodeBlockCopyButton />
+                </CodeBlock>
+              );
+            }
+            return (
+              <code className={cn("bg-muted px-1.5 py-0.5 rounded font-mono text-sm", className)} {...props}>
+                {children}
+              </code>
+            );
+          },
+          // Style other elements to match shadcn/typography
+          p: ({ children }) => <p className="mb-4 last:mb-0">{children}</p>,
+          ul: ({ children }) => <ul className="my-4 ml-6 list-disc [&>li]:mt-2">{children}</ul>,
+          ol: ({ children }) => <ol className="my-4 ml-6 list-decimal [&>li]:mt-2">{children}</ol>,
+          li: ({ children }) => <li>{children}</li>,
+          a: ({ href, children }) => <a href={href} className="font-medium underline underline-offset-4 text-primary" target="_blank" rel="noreferrer">{children}</a>,
+          blockquote: ({ children }) => <blockquote className="mt-6 border-l-2 border-primary pl-6 italic">{children}</blockquote>,
+        }}
+      >
+        {children as string}
+      </ReactMarkdown>
+    </div>
   ),
   (prevProps, nextProps) => prevProps.children === nextProps.children
 );

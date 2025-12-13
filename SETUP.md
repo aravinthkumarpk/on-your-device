@@ -1,8 +1,8 @@
-# Setup Guide for Qwen-Web
+# Setup Guide for OnYourDevice
 
 ## Successfully Replicated! 🎉
 
-This is a replication of [sdan/qwen-web](https://github.com/sdan/qwen-web) - a WebGPU-powered in-browser AI chat application.
+This is based on [sdan/qwen-web](https://github.com/sdan/qwen-web) - a WebGPU-powered in-browser AI chat application.
 
 ## What's Been Created
 

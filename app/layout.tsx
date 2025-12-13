@@ -10,32 +10,41 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: 'qwen-web',
-  description: 'Run Qwen LLMs locally in your browser with WebGPU. Zero installation, instant AI chat.',
-  metadataBase: new URL('https://qwen-web.sdan.io'),
+  title: 'OnYourDevice',
+  description: 'Run AI models locally in your browser with WebGPU. Zero installation, instant AI chat.',
+  metadataBase: new URL('https://onyourdevice.ai'),
   openGraph: {
-    title: 'qwen-web',
-    description: 'Run Qwen LLMs locally in your browser with WebGPU. Zero installation, instant AI chat.',
-    url: 'https://qwen-web.sdan.io',
-    siteName: 'qwen-web',
+    title: 'OnYourDevice',
+    description: 'Run AI models locally in your browser with WebGPU. Zero installation, instant AI chat.',
+    url: 'https://onyourdevice.ai',
+    siteName: 'OnYourDevice',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'qwen-web',
-    description: 'Run Qwen LLMs locally in your browser with WebGPU. Zero installation, instant AI chat.',
+    title: 'OnYourDevice',
+    description: 'Run AI models locally in your browser with WebGPU. Zero installation, instant AI chat.',
   },
   icons: {
     icon: '/favicon.ico',
   },
 };
 
+import { ThemeProvider } from '@root/components/theme-provider';
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-us" className="dark" suppressHydrationWarning>
-      <body className={`min-h-screen bg-background text-foreground antialiased ${outfit.variable} font-sans`}>
-        {children}
-        <Analytics />
+    <html lang="en-us" suppressHydrationWarning>
+      <body className={`min-h-screen bg-background text-foreground antialiased ${outfit.variable} font-sans opacity-100 transition-opacity duration-300`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <Analytics />
+        </ThemeProvider>
       </body>
     </html>
   );
