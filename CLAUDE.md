@@ -126,7 +126,7 @@ this.model ??= await AutoModelForCausalLM.from_pretrained(...)
 
 This ensures the model is only loaded once and reused across multiple generations.
 
-**Model specs**: see `lib/models.ts` (Qwen3.5 0.8B / 2B / 4B ONNX-OPT builds, q4f16 with shader-f16, else q4, device `webgpu`). Chat state uses AI SDK v7 `useChat` with `lib/worker-transport.ts`. Tests: `npm test` (Vitest) and `npm run test:e2e` (Playwright, fake engine via `?engine=fake`).
+**Model specs**: see `lib/models.ts` (Qwen3.5 0.8B / 2B / 4B ONNX-OPT builds, q4f16 with shader-f16, else q4, device `webgpu`). Chat state uses AI SDK v7 `useChat` with `lib/worker-transport.ts`. Tests: `npm test` (Vitest) and `npm run test:e2e` (Playwright, fake engine via `?engine=fake`). `/bench` times load and tok/s for browser and Ollama models and prints JSON (`lib/bench.ts`).
 
 ### Streaming Architecture
 

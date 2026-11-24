@@ -84,7 +84,7 @@ export function hasModel(installed: string[], tag: string): boolean {
 }
 
 /** Reads newline-delimited JSON from a streaming response. */
-async function* ndjson<T>(body: ReadableStream<Uint8Array>): AsyncIterable<T> {
+export async function* ndjson<T>(body: ReadableStream<Uint8Array>): AsyncIterable<T> {
     const reader = body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
