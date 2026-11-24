@@ -23,7 +23,7 @@ import {
 import { Loader } from '@root/components/ai-elements/loader';
 import { Suggestion, Suggestions } from '@root/components/ai-elements/suggestion';
 import { CopyIcon, ThumbsUpIcon, StopCircleIcon, SparklesIcon, Zap } from 'lucide-react';
-import { type Message as ChatMessage } from '@root/app/hooks/useWorker';
+import { type ChatTurn as ChatMessage } from '@root/lib/engine';
 import { cn } from '@root/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -35,6 +35,7 @@ export interface ChatContainerProps {
     tps: number | null;
     onSend: (content: string) => void;
     onInterrupt: () => void;
+    modelLabel?: string;
 }
 
 const SUGGESTIONS = [
@@ -114,6 +115,7 @@ export function ChatContainer({
     tps,
     onSend,
     onInterrupt,
+    modelLabel = 'a local model',
 }: ChatContainerProps) {
     const handleCopy = useCallback((text: string) => {
         navigator.clipboard.writeText(text);
@@ -130,7 +132,7 @@ export function ChatContainer({
                 {isEmpty ? (
                     <ConversationEmptyState
                         title="Start a conversation"
-                        description="Ask me anything! I'm Qwen3-0.6B running locally in your browser."
+                        description={`Ask me anything! I'm ${modelLabel} running locally in your browser.`}
                         icon={<SparklesIcon className="size-8" />}
                     >
                         <div className="mt-6 w-full max-w-xl">

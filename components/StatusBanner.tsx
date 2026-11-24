@@ -1,6 +1,6 @@
 'use client';
 
-import { WorkerProgress, WorkerStatus } from '../app/hooks/useWorker';
+import type { EngineProgress as WorkerProgress, EngineStatus as WorkerStatus } from '@root/app/hooks/useEngine';
 import { Card, CardContent } from '@root/components/ui/card';
 import { AlertCircle } from 'lucide-react';
 

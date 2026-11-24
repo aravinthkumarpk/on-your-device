@@ -1,257 +1,145 @@
-// Import from CDN for Web Worker
+// Runs the browser model in a Web Worker so the page stays responsive.
+// Transformers.js loads from a pinned CDN build because workers can't use the
+// page bundle. Keep this version in step with package.json.
 import {
-  AutoTokenizer,
-  AutoModelForCausalLM,
+  AutoProcessor,
+  Qwen3_5ForConditionalGeneration,
   TextStreamer,
   InterruptableStoppingCriteria,
-} from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.0";
+} from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2";
 
-// Debug logger - only outputs when DEBUG is true
-// Set to false for production to reduce console noise
 const DEBUG = false;
-const log = (...args) => DEBUG && console.log('[Worker]', ...args);
+const log = (...args) => DEBUG && console.log("[Worker]", ...args);
 
-log('Imported dependencies');
+// Loading follows the official Qwen3.5 WebGPU demo by webml-community.
+// The decoder uses q4f16 when the GPU has shader-f16, else q4.
+let processor = null;
+let model = null;
+let loadedKey = null;
 
-async function check() {
-  log('Running WebGPU check');
-  try {
-    const adapter = await navigator.gpu.requestAdapter();
-    log('Got adapter:', adapter);
-    if (!adapter) {
-      throw new Error("WebGPU is not supported (no adapter found)");
-    }
-  } catch (e) {
-    console.error('WebGPU check failed:', e);
-    self.postMessage({
-      status: "error",
-      data: e.toString(),
-    });
+async function loadModel({ id, dtype }) {
+  const key = `${id}:${dtype}`;
+  if (model && loadedKey === key) return;
+  if (model) {
+    await model.dispose?.();
+    model = null;
   }
+  processor = await AutoProcessor.from_pretrained(id, { progress_callback: handleProgress });
+  model = await Qwen3_5ForConditionalGeneration.from_pretrained(id, {
+    dtype: {
+      embed_tokens: dtype,
+      decoder_model_merged: dtype,
+      vision_encoder: dtype === "q4f16" ? "q4f16" : "fp16",
+    },
+    device: "webgpu",
+    progress_callback: handleProgress,
+  });
+  loadedKey = key;
 }
 
-class TextGenerationPipeline {
-  static model_id = "onnx-community/Qwen3-0.6B-ONNX";
-
-  static async getInstance(progress_callback = null) {
-    log('Getting pipeline instance');
-    try {
-      this.tokenizer ??= await AutoTokenizer.from_pretrained(this.model_id, {
-        progress_callback,
-      });
-      log('Tokenizer loaded successfully');
-
-      this.model ??= await AutoModelForCausalLM.from_pretrained(this.model_id, {
-        dtype: "q4f16",
-        device: "webgpu",
-        progress_callback,
-      });
-      log('Model loaded successfully');
-
-      return [this.tokenizer, this.model];
-    } catch (error) {
-      console.error('Failed to load model:', error);
-      let errorMessage = error?.message || error?.toString() || `Unknown error (${typeof error}): ${JSON.stringify(error)}`;
-
-      // Handle specific ONNX/WebGPU errors
-      if (errorMessage.includes('3944596720') || errorMessage.includes('WebGPU')) {
-        errorMessage = 'WebGPU device creation failed. Try refreshing the page or check your GPU drivers.';
-      } else if (errorMessage.includes('onnxruntime') || errorMessage.includes('session')) {
-        errorMessage = 'Model initialization failed. The model may be corrupted or incompatible.';
-      } else if (errorMessage.includes('memory') || errorMessage.includes('OOM')) {
-        errorMessage = 'Insufficient GPU memory. Try closing other tabs or use a device with more VRAM.';
-      }
-
-      self.postMessage({
-        status: "error",
-        data: `Model loading failed: ${errorMessage}`
-      });
-      throw error;
-    }
+// Qwen3.5 ChatML. Thinking is off: the assistant turn starts with an empty
+// think block, which is how the model card disables it.
+function buildPrompt(turns) {
+  let prompt = "";
+  for (const { role, content } of turns) {
+    prompt += `<|im_start|>${role}\n${content}<|im_end|>\n`;
   }
+  return prompt + "<|im_start|>assistant\n<think>\n\n</think>\n\n";
+}
+
+function splitThinking(raw) {
+  const start = raw.indexOf("<think>");
+  const end = raw.indexOf("</think>");
+  if (start === -1) return { thought: "", answer: raw };
+  if (end > start) return { thought: raw.slice(start + 7, end).trim(), answer: raw.slice(end + 8) };
+  return { thought: raw.slice(start + 7), answer: raw.slice(0, start) };
 }
 
 const stopping_criteria = new InterruptableStoppingCriteria();
-let past_key_values_cache = null;
 
-async function generate(messages) {
-  log('Starting generation with messages:', messages);
-  const [tokenizer, model] = await TextGenerationPipeline.getInstance();
-  log('Got tokenizer and model instances');
+async function generate(id, turns) {
+  if (!model) {
+    self.postMessage({ status: "error", id, data: "The model is not loaded yet." });
+    return;
+  }
+  stopping_criteria.reset();
+  const inputs = await processor(buildPrompt(turns));
 
-  const inputs = tokenizer.apply_chat_template(messages, {
-    add_generation_prompt: true,
-    return_dict: true,
-  });
-  log('Applied chat template:', inputs);
-
-  let state = "thinking";
+  let raw = "";
   let startTime;
   let numTokens = 0;
   let tps;
-  let rawBuffer = "";
 
-  const token_callback_function = (tokens) => {
-    log('Token callback:', tokens);
-    startTime ??= performance.now();
-    if (numTokens++ > 0) {
-      tps = (numTokens / (performance.now() - startTime)) * 1000;
-      log('Current TPS:', tps);
-    }
-  };
-
-  const callback_function = (output) => {
-    log('Output callback:', output);
-    rawBuffer += output;
-
-    // Split thinking vs answer based on <think> ... </think>
-    let thought = '';
-    let answer = rawBuffer;
-    const start = rawBuffer.indexOf('<think>');
-    const end = rawBuffer.indexOf('</think>');
-
-    if (start !== -1) {
-      if (end !== -1 && end > start) {
-        thought = rawBuffer.slice(start + 7, end).trim();
-        answer = rawBuffer.slice(end + 8);
-        state = "answering";
-      } else {
-        thought = rawBuffer.slice(start + 7);
-        answer = rawBuffer.slice(0, start);
-        state = "thinking";
-      }
-    } else {
-      state = "answering";
-    }
-
-    self.postMessage({
-      status: "update",
-      output: answer,
-      thought,
-      tps,
-      numTokens,
-      state,
-    });
-  };
-
-  const streamer = new TextStreamer(tokenizer, {
+  const streamer = new TextStreamer(processor.tokenizer, {
     skip_prompt: true,
     skip_special_tokens: true,
-    callback_function,
-    token_callback_function,
+    token_callback_function: () => {
+      startTime ??= performance.now();
+      if (numTokens++ > 0) tps = (numTokens / (performance.now() - startTime)) * 1000;
+    },
+    callback_function: (text) => {
+      raw += text;
+      const { thought, answer } = splitThinking(raw);
+      self.postMessage({ status: "update", id, output: answer, thought, tps });
+    },
   });
-  log('Created streamer');
 
-  self.postMessage({ status: "start" });
+  self.postMessage({ status: "start", id });
+  try {
+    await model.generate({
+      ...inputs,
+      do_sample: false,
+      max_new_tokens: 1024,
+      streamer,
+      stopping_criteria,
+    });
+    self.postMessage({ status: "complete", id, output: splitThinking(raw).answer });
+  } catch (error) {
+    self.postMessage({ status: "error", id, data: friendlyError(error) });
+  }
+}
 
-  const { past_key_values, sequences } = await model.generate({
-    ...inputs,
-    do_sample: false,
-    max_new_tokens: 2048,
-    streamer,
-    stopping_criteria,
-    return_dict_in_generate: true,
-  });
-  log('Generation complete:', sequences);
-
-  past_key_values_cache = past_key_values;
-
-  const decoded = tokenizer.batch_decode(sequences, { skip_special_tokens: true });
-  log('Decoded output:', decoded);
-  self.postMessage({ status: "complete", output: decoded });
+function friendlyError(error) {
+  const message = error?.message || String(error);
+  if (/memory|OOM|allocation/i.test(message)) {
+    return "Your device ran out of GPU memory. Close other tabs or pick the smaller model.";
+  }
+  if (/WebGPU|adapter|device/i.test(message)) {
+    return "WebGPU stopped working. Refresh the page, or update your browser and GPU drivers.";
+  }
+  return message;
 }
 
 function handleProgress(event) {
-  log('Progress event:', event);
-  if (!event.total) return;
-
-  const friendlyName = "Qwen3-0.6B-ONNX";
-  const fileLabel = event.url || friendlyName;
-
-  if (event.loaded === 0) {
-    log('Starting file load:', event.url);
-    self.postMessage({
-      status: "initiate",
-      file: fileLabel,
-      progress: 0,
-      total: event.total,
-    });
-  } else if (event.loaded < event.total) {
-    const percent = Math.round((event.loaded / event.total) * 100);
-    log(`Loading progress: ${percent}%`);
-    self.postMessage({
-      status: "progress",
-      file: fileLabel,
-      progress: percent,
-      total: 100,
-    });
-  } else {
-    log('File load complete:', event.url);
-    self.postMessage({
-      status: "done",
-      file: fileLabel,
-    });
+  if (event.status === "initiate") {
+    self.postMessage({ status: "initiate", file: event.file, progress: 0 });
+  } else if (event.status === "progress" && event.total) {
+    self.postMessage({ status: "progress", file: event.file, progress: Math.round((event.loaded / event.total) * 100) });
+  } else if (event.status === "done") {
+    self.postMessage({ status: "done", file: event.file });
   }
 }
 
-async function load() {
-  log('Starting model load');
-  self.postMessage({ status: "loading", data: "Checking WebGPU support..." });
-
+async function load(modelConfig) {
+  self.postMessage({ status: "loading", data: "Checking WebGPU..." });
   try {
-    // First check for WebGPU support
-    log('Running WebGPU check');
-    const adapter = await navigator.gpu.requestAdapter();
-    log('Got adapter:', adapter);
-    if (!adapter) {
-      throw new Error("WebGPU is not supported (no adapter found)");
-    }
-
-    // If we get here, WebGPU is supported, so proceed with loading the model
-    self.postMessage({ status: "loading", data: "Loading Qwen3-0.6B-ONNX..." });
-
-    const [tokenizer, model] = await TextGenerationPipeline.getInstance(handleProgress);
-    log('Model loaded successfully');
-
-    self.postMessage({ status: "loading", data: "Compiling shaders and warming up model..." });
-    const inputs = tokenizer("a");
-    log('Warmup inputs:', inputs);
-    await model.generate({ ...inputs, max_new_tokens: 1 });
-    log('Warmup complete');
+    const adapter = await navigator.gpu?.requestAdapter();
+    if (!adapter) throw new Error("WebGPU is not available in this browser.");
+    self.postMessage({ status: "loading", data: "Downloading the model..." });
+    await loadModel(modelConfig);
+    self.postMessage({ status: "loading", data: "Warming up..." });
+    const warm = await processor("a");
+    await model.generate({ ...warm, max_new_tokens: 1 });
     self.postMessage({ status: "ready" });
   } catch (error) {
-    console.error('Model load failed:', error);
-    const errorMessage = error?.message || error?.toString() || `Unknown error (${typeof error}): ${JSON.stringify(error)}`;
-    self.postMessage({
-      status: "error",
-      data: `Model load failed: ${errorMessage}`
-    });
+    log("load failed", error);
+    self.postMessage({ status: "error", data: friendlyError(error) });
   }
 }
 
-self.addEventListener("message", async (e) => {
-  const { type, data } = e.data;
-  log('Received message:', type, data);
-
-  switch (type) {
-    case "check":
-      check();
-      break;
-    case "load":
-      load();
-      break;
-    case "generate":
-      stopping_criteria.reset();
-      generate(data);
-      break;
-    case "interrupt":
-      log('Interrupting generation');
-      stopping_criteria.interrupt();
-      break;
-    case "reset":
-      log('Resetting state');
-      past_key_values_cache = null;
-      stopping_criteria.reset();
-      break;
-  }
+self.addEventListener("message", (e) => {
+  const { type, id, data, model: modelConfig } = e.data;
+  if (type === "load") load(modelConfig);
+  if (type === "generate") generate(id, data);
+  if (type === "interrupt") stopping_criteria.interrupt();
 });

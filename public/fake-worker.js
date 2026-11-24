@@ -7,37 +7,37 @@ let interrupted = false;
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function load() {
+async function load(model) {
   self.postMessage({ status: 'loading', data: 'Loading fake model...' });
-  self.postMessage({ status: 'initiate', file: 'fake-model.onnx', progress: 0 });
+  const file = `${model?.id ?? 'fake'}/model.onnx`;
+  self.postMessage({ status: 'initiate', file, progress: 0 });
   for (const progress of [25, 50, 75]) {
     await wait(20);
-    self.postMessage({ status: 'progress', file: 'fake-model.onnx', progress });
+    self.postMessage({ status: 'progress', file, progress });
   }
-  self.postMessage({ status: 'done', file: 'fake-model.onnx' });
+  self.postMessage({ status: 'done', file });
   self.postMessage({ status: 'ready' });
 }
 
-async function generate(messages) {
+async function generate(id, turns) {
   interrupted = false;
-  const last = messages[messages.length - 1]?.content ?? '';
+  const last = turns[turns.length - 1]?.content ?? '';
   const slow = last.includes('[slow]');
   const words = REPLY.split(' ');
-  self.postMessage({ status: 'start' });
+  self.postMessage({ status: 'start', id });
   let answer = '';
   for (let i = 0; i < words.length; i++) {
     if (interrupted) break;
     await wait(slow ? 400 : 15);
     answer += (i ? ' ' : '') + words[i];
-    self.postMessage({ status: 'update', output: answer, thought: '', tps: 42 });
+    self.postMessage({ status: 'update', id, output: answer, thought: '', tps: 42 });
   }
-  // worker.js sends the decoded sequence, and the page drops its first line.
-  self.postMessage({ status: 'complete', output: ['assistant\n' + answer] });
+  self.postMessage({ status: 'complete', id, output: answer });
 }
 
 self.addEventListener('message', (e) => {
-  const { type, data } = e.data;
-  if (type === 'load') load();
-  if (type === 'generate') generate(data);
+  const { type, id, data, model } = e.data;
+  if (type === 'load') load(model);
+  if (type === 'generate') generate(id, data);
   if (type === 'interrupt') interrupted = true;
 });

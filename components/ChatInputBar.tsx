@@ -20,6 +20,7 @@ export interface ChatInputBarProps {
     disabled: boolean;
     isGenerating: boolean;
     hasMessages: boolean;
+    modelLabel?: string;
 }
 
 export function ChatInputBar({
@@ -29,6 +30,7 @@ export function ChatInputBar({
     disabled,
     isGenerating,
     hasMessages,
+    modelLabel = 'The model',
 }: ChatInputBarProps) {
     const handleSubmit = useCallback(
         (message: PromptInputMessage) => {
@@ -48,7 +50,7 @@ export function ChatInputBar({
                     className="rounded-2xl border border-border/40 bg-background/50 backdrop-blur-sm p-2 shadow-sm transition-all focus-within:border-primary/50 focus-within:bg-background/70 focus-within:shadow-md"
                 >
                     <PromptInputTextarea
-                        placeholder={disabled ? "Waiting for model to load..." : "Message Qwen3..."}
+                        placeholder={disabled ? "Waiting for model to load..." : `Message ${modelLabel}...`}
                         disabled={disabled && !isGenerating}
                         className={cn(
                             "min-h-[60px] resize-none bg-transparent px-4 py-3",
@@ -93,7 +95,7 @@ export function ChatInputBar({
                 </PromptInput>
 
                 <p className="mt-2 text-center text-xs text-muted-foreground">
-                    Qwen3-0.6B running locally in your browser with WebGPU
+                    {modelLabel} running locally in your browser with WebGPU
                 </p>
             </div>
         </div>
