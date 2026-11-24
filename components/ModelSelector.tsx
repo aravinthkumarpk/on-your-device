@@ -15,7 +15,7 @@ interface ModelSelectorProps {
 
 export function ModelSelector({
     status,
-    modelName = 'Qwen3-0.6B',
+    modelName = 'Local model',
     error,
     progress,
     className

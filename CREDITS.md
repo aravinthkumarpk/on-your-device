@@ -16,7 +16,9 @@ The app downloads these from Hugging Face at runtime. They are not stored in thi
 
 | Model id | Made by | Converted by | License |
 |---|---|---|---|
-| `onnx-community/Qwen3-0.6B-ONNX` | [Qwen team, Alibaba Cloud](https://huggingface.co/Qwen/Qwen3-0.6B) | [ONNX Community](https://huggingface.co/onnx-community) | Apache 2.0 |
+| `onnx-community/Qwen3.5-0.8B-ONNX-OPT` | [Qwen team, Alibaba Cloud](https://huggingface.co/Qwen/Qwen3.5-0.8B) | [ONNX Community](https://huggingface.co/onnx-community) | Apache 2.0 |
+| `onnx-community/Qwen3.5-2B-ONNX-OPT` | [Qwen team, Alibaba Cloud](https://huggingface.co/Qwen/Qwen3.5-2B) | [ONNX Community](https://huggingface.co/onnx-community) | Apache 2.0 |
+| `onnx-community/Qwen3.5-4B-ONNX-OPT` | [Qwen team, Alibaba Cloud](https://huggingface.co/Qwen/Qwen3.5-4B) | [ONNX Community](https://huggingface.co/onnx-community) | Apache 2.0 |
 
 ## Libraries
 
@@ -24,7 +26,7 @@ The app downloads these from Hugging Face at runtime. They are not stored in thi
 |---|---|---|---|
 | [Transformers.js](https://github.com/huggingface/transformers.js) | [Xenova](https://github.com/xenova) and Hugging Face | Apache 2.0 | Runs the models in the browser |
 | [ONNX Runtime Web](https://github.com/microsoft/onnxruntime) | Microsoft | MIT | The WebGPU and WASM engine under Transformers.js |
-| [AI SDK](https://github.com/vercel/ai) | Vercel | Apache 2.0 | Chat message types |
+| [AI SDK](https://github.com/vercel/ai) | Vercel | Apache 2.0 | Chat state (`useChat`) and message streaming |
 | [AI Elements](https://github.com/vercel/ai-elements) | Vercel | Apache 2.0 | Chat UI components in `components/ai-elements` |
 | [shadcn/ui](https://github.com/shadcn-ui/ui) | shadcn | MIT | Base UI components in `components/ui` |
 | [Radix UI](https://github.com/radix-ui/primitives) | WorkOS | MIT | Accessible UI primitives |
@@ -33,6 +35,10 @@ The app downloads these from Hugging Face at runtime. They are not stored in thi
 | [Motion](https://github.com/motiondivision/motion) | Matt Perry | MIT | Animation |
 | [Streamdown](https://github.com/vercel/streamdown) | Vercel | Apache 2.0 | Streaming Markdown rendering |
 | [Outfit font](https://fonts.google.com/specimen/Outfit) | Rodrigo Fuenzalida | OFL 1.1 | Typeface, bundled at build time |
+
+## Code patterns
+
+- Loading Qwen3.5 on WebGPU in `public/worker.js` follows the official [Qwen3.5 WebGPU demo](https://huggingface.co/spaces/webml-community/Qwen3.5-WebGPU) by the WebML Community.
 
 ## Communities
 

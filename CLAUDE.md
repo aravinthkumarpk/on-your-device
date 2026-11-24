@@ -46,7 +46,7 @@ npm lint
 - Renders chat interface with streaming responses
 
 **Worker Thread** (`public/worker.js`):
-- Loads Qwen3-0.6B-ONNX model from Hugging Face (~400MB)
+- Loads a Qwen3.5 ONNX model from Hugging Face, picked per device in `lib/models.ts` (0.8B on phones, 2B on laptops)
 - Handles tokenization via `AutoTokenizer.from_pretrained()`
 - Runs inference with `AutoModelForCausalLM` using WebGPU device
 - Streams tokens back to main thread via `postMessage()`
@@ -126,11 +126,7 @@ this.model ??= await AutoModelForCausalLM.from_pretrained(...)
 
 This ensures the model is only loaded once and reused across multiple generations.
 
-**Model specs**:
-- ID: `onnx-community/Qwen3-0.6B-ONNX`
-- Quantization: `q4f16` (4-bit weights, float16 activations)
-- Size: ~400MB download
-- Device: `webgpu`
+**Model specs**: see `lib/models.ts` (Qwen3.5 0.8B / 2B / 4B ONNX-OPT builds, q4f16 with shader-f16, else q4, device `webgpu`). Chat state uses AI SDK v7 `useChat` with `lib/worker-transport.ts`. Tests: `npm test` (Vitest) and `npm run test:e2e` (Playwright, fake engine via `?engine=fake`).
 
 ### Streaming Architecture
 
@@ -227,7 +223,7 @@ After `npm run build`:
 
 ## Troubleshooting Development Issues
 
-**Worker not loading**: The `public/worker.js` file imports `@huggingface/transformers` from CDN (`https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.0`). This is required because:
+**Worker not loading**: The `public/worker.js` file imports `@huggingface/transformers` from CDN (`https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2`). This is required because:
 - Workers can't access the main bundle
 - The transformers.js library needs to load WASM files dynamically
 - CDN provides the complete bundled version with all dependencies

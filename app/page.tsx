@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useWorker, Message } from './hooks/useWorker';
+import { useCallback, useMemo } from 'react';
+import { useChat } from '@ai-sdk/react';
+import { useEngine } from './hooks/useEngine';
+import { toChatTurns } from '@root/lib/engine';
 import { ChatContainer } from '@components/ChatContainer';
 import { ChatInputBar } from '@components/ChatInputBar';
 import { ErrorBoundary } from '@components/ErrorBoundary';
@@ -11,44 +13,46 @@ import { ModelSelector } from '@root/components/ModelSelector';
 export const dynamic = 'force-static';
 
 /**
- * Main chat page component
- * Uses custom hooks for WebGPU detection and worker communication
+ * Main chat page. useEngine loads the model in a worker, and useChat
+ * (AI SDK) manages the conversation through the worker transport.
  */
 export default function Page() {
-  const worker = useWorker();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const engine = useEngine();
+  const { messages, sendMessage, status, stop, setMessages, error } = useChat({
+    transport: engine.transport,
+  });
 
-  // Set up completion handler to add assistant messages to history
-  useEffect(() => {
-    worker.onComplete((response: string) => {
-      setMessages(prev => [...prev, { role: 'assistant', content: response }]);
-    });
-  }, [worker]);
+  const isGenerating = status === 'submitted' || status === 'streaming';
+  const last = messages[messages.length - 1];
+  const streaming = isGenerating && last?.role === 'assistant' ? last : null;
 
-  // Handle sending a new message
+  // Finished turns, plus the reply that is still streaming.
+  const history = useMemo(
+    () => toChatTurns(streaming ? messages.slice(0, -1) : messages, Infinity),
+    [messages, streaming],
+  );
+  const currentResponse = streaming ? toChatTurns([streaming])[0]?.content ?? '' : '';
+  const thought = streaming
+    ? streaming.parts.filter((p) => p.type === 'reasoning').map((p) => ('text' in p ? p.text : '')).join('')
+    : '';
+
   const handleSend = useCallback((content: string) => {
-    const userMessage: Message = { role: 'user', content };
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
-    worker.sendMessage(newMessages);
-  }, [messages, worker]);
+    sendMessage({ text: content });
+  }, [sendMessage]);
 
-  // Handle clearing the conversation
   const handleClear = useCallback(() => {
+    stop();
     setMessages([]);
-    worker.reset();
-  }, [worker]);
+  }, [stop, setMessages]);
 
-  // Determine if input should be disabled
-  const isDisabled = worker.status !== 'ready' || worker.generation.isGenerating;
+  const modelLabel = engine.pick?.model.label;
+  const isDisabled = engine.status !== 'ready' || isGenerating;
 
   return (
     <ErrorBoundary>
       <div className="flex h-screen flex-col bg-gradient-to-b from-background to-secondary/20">
-        {/* Header */}
         <header className="shrink-0 border-b border-border/40 bg-background/80 px-4 py-4 backdrop-blur-xl">
           <div className="mx-auto flex max-w-4xl items-center justify-between gap-4">
-            {/* Left: Title */}
             <div className="flex flex-col">
               <h1 className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-2xl font-bold tracking-tight text-transparent">
                 OnYourDevice
@@ -57,40 +61,44 @@ export default function Page() {
                 Run AI models locally in your browser with WebGPU
               </p>
             </div>
-
-            {/* Right: Model Selector + Theme Toggle */}
             <div className="flex items-center gap-3">
               <ModelSelector
-                status={worker.status}
-                modelName="Qwen3-0.6B"
-                error={worker.error ?? undefined}
-                progress={worker.progress}
+                status={engine.status}
+                modelName={modelLabel}
+                error={engine.error ?? undefined}
+                progress={engine.progress}
               />
               <ThemeToggle />
             </div>
           </div>
         </header>
 
-        {/* Chat container - this is the scrollable area */}
         <ChatContainer
-          messages={messages}
-          isGenerating={worker.generation.isGenerating}
-          currentResponse={worker.generation.currentResponse}
-          thought={worker.generation.thought}
-          tps={worker.generation.tps}
+          messages={history}
+          isGenerating={isGenerating}
+          currentResponse={currentResponse}
+          thought={thought}
+          tps={engine.tps}
           onSend={handleSend}
-          onInterrupt={worker.interrupt}
+          onInterrupt={stop}
+          modelLabel={modelLabel}
         />
 
-        {/* Input controls - fixed at bottom */}
+        {error && (
+          <p role="alert" className="mx-auto max-w-4xl px-4 text-sm text-destructive">
+            {error.message}
+          </p>
+        )}
+
         <div className="shrink-0">
           <ChatInputBar
             onSend={handleSend}
             onClear={handleClear}
-            onInterrupt={worker.interrupt}
+            onInterrupt={stop}
             disabled={isDisabled}
-            isGenerating={worker.generation.isGenerating}
+            isGenerating={isGenerating}
             hasMessages={messages.length > 0}
+            modelLabel={modelLabel}
           />
         </div>
       </div>
