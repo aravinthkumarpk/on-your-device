@@ -16,6 +16,8 @@ export default [
             "out/",
             "public/worker.js",
             "next-env.d.ts",
+            "playwright-report/",
+            "test-results/",
         ],
     },
 ];
