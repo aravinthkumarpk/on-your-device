@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { loadModel, workerUrlFor, type WorkerEvent } from '@root/lib/engine';
+import { loadModel, workerUrlFor, type ChatTurn, type WorkerEvent } from '@root/lib/engine';
+import type { ChatTransport, UIMessage } from 'ai';
 import {
     detectDevice,
     isModelKey,
@@ -63,7 +64,7 @@ function save(key: BrowserModelKey) {
  * Owns the model worker: detects the device, suggests a model, loads it on
  * Start (or straight away on a return visit) and exposes an AI SDK transport.
  */
-export function useEngine() {
+export function useEngine(getChats: () => ChatTurn[] = () => []) {
     const workerRef = useRef<Worker | null>(null);
     const filesRef = useRef<Record<string, FileProgress>>({});
     const startedAtRef = useRef<number | null>(null);
@@ -228,7 +229,24 @@ export function useEngine() {
     const bridgeTransport = useMemo(() => (bridge ? new TextStreamerTransport(bridge) : null), [bridge]);
     const bridgeRef = useRef(bridgeTransport);
     bridgeRef.current = bridgeTransport;
-    const localTransport = useMemo(() => (local ? new TextStreamerTransport(ollamaStreamer(local.tag), 'ollama') : null), [local]);
+    const getChatsRef = useRef(getChats);
+    getChatsRef.current = getChats;
+    const [localTransport, setLocalTransport] = useState<ChatTransport<UIMessage> | null>(null);
+    useEffect(() => {
+        if (!local) {
+            setLocalTransport(null);
+            return;
+        }
+        // Plain chat right away; the agent (with tools) loads on demand to keep the first page small.
+        setLocalTransport(new TextStreamerTransport(ollamaStreamer(local.tag), 'ollama'));
+        let cancelled = false;
+        import('@root/lib/ollama-agent').then(({ ollamaAgentTransport }) => {
+            if (!cancelled) setLocalTransport(ollamaAgentTransport(local.tag, () => getChatsRef.current()));
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [local]);
     const localRef = useRef(localTransport);
     localRef.current = localTransport;
 

@@ -26,6 +26,7 @@ import { CopyIcon, ThumbsUpIcon, StopCircleIcon, SparklesIcon, Zap } from 'lucid
 import { type DisplayTurn as ChatMessage } from '@root/lib/engine';
 import { cn } from '@root/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { ToolCard } from '@root/components/ToolCard';
 
 export interface ChatContainerProps {
     messages: ChatMessage[];
@@ -36,6 +37,7 @@ export interface ChatContainerProps {
     onSend: (content: string) => void;
     onInterrupt: () => void;
     modelLabel?: string;
+    onToolApproval?: (approvalId: string, approved: boolean) => void;
 }
 
 const SUGGESTIONS = [
@@ -116,6 +118,7 @@ export function ChatContainer({
     onSend,
     onInterrupt,
     modelLabel = 'a local model',
+    onToolApproval,
 }: ChatContainerProps) {
     const handleCopy = useCallback((text: string) => {
         navigator.clipboard.writeText(text);
@@ -172,6 +175,9 @@ export function ChatContainer({
                                                     message.role === 'user' && 'bg-primary text-primary-foreground rounded-2xl rounded-tr-sm shadow-md'
                                                 )}
                                             >
+                                                {isAssistant && message.tools?.map((t) => (
+                                                    <ToolCard key={t.callId} tool={t} onApprove={(id, ok) => onToolApproval?.(id, ok)} />
+                                                ))}
                                                 {/* Show thinking in collapsible for assistant messages */}
                                                 {isAssistant && parsed.thinking && (
                                                     <Reasoning isStreaming={false} defaultOpen={false}>
@@ -179,7 +185,7 @@ export function ChatContainer({
                                                         <ReasoningContent>{cleanTags(parsed.thinking)}</ReasoningContent>
                                                     </Reasoning>
                                                 )}
-                                                <MessageResponse>{cleanTags(parsed.response)}</MessageResponse>
+                                                {parsed.response && <MessageResponse>{cleanTags(parsed.response)}</MessageResponse>}
                                             </MessageContent>
                                             {isAssistant && message.badge && (
                                                 <p className="mt-1 text-xs text-muted-foreground" data-testid="answer-badge">{message.badge}</p>

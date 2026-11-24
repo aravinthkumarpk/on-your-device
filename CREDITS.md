@@ -41,7 +41,9 @@ In Chrome on desktop, if Google's Gemini Nano is already downloaded, the app can
 |---|---|---|---|
 | [Transformers.js](https://github.com/huggingface/transformers.js) | [Xenova](https://github.com/xenova) and Hugging Face | Apache 2.0 | Runs the models in the browser |
 | [ONNX Runtime Web](https://github.com/microsoft/onnxruntime) | Microsoft | MIT | The WebGPU and WASM engine under Transformers.js |
-| [AI SDK](https://github.com/vercel/ai) | Vercel | Apache 2.0 | Chat state (`useChat`) and message streaming |
+| [AI SDK](https://github.com/vercel/ai) | Vercel | Apache 2.0 | Chat state (`useChat`), message streaming, and the local agent (`ToolLoopAgent`) |
+| [AI SDK OpenAI-compatible provider](https://github.com/vercel/ai/tree/main/packages/openai-compatible) | Vercel | Apache 2.0 | Talks to Ollama's OpenAI-style API for tool calls |
+| [Zod](https://github.com/colinhacks/zod) | Colin McDonnell | MIT | Schema validation inside the provider |
 | [AI Elements](https://github.com/vercel/ai-elements) | Vercel | Apache 2.0 | Chat UI components in `components/ai-elements` |
 | [shadcn/ui](https://github.com/shadcn-ui/ui) | shadcn | MIT | Base UI components in `components/ui` |
 | [Radix UI](https://github.com/radix-ui/primitives) | WorkOS | MIT | Accessible UI primitives |

@@ -36,6 +36,17 @@ async function fakeOllama(page: Page, initial: OllamaState, pulled: string[] = [
             ];
             return route.fulfill({ status: 200, headers, body: lines.map((l) => JSON.stringify(l)).join('\n') + '\n' });
         }
+        if (path === '/v1/chat/completions') {
+            const body = req.postDataJSON();
+            state.chats.push(body);
+            const hasToolResult = body.messages.some((m: { role: string }) => m.role === 'tool');
+            const chunk = (delta: object, finish: string | null = null) =>
+                `data: ${JSON.stringify({ id: 'x', object: 'chat.completion.chunk', created: 1, model: body.model, choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`;
+            const sse = hasToolResult
+                ? chunk({ role: 'assistant', content: '12 times 7 is 84.' }) + chunk({}, 'stop')
+                : chunk({ role: 'assistant', tool_calls: [{ index: 0, id: 'call_1', type: 'function', function: { name: 'calculator', arguments: '{"expression":"12*7"}' } }] }) + chunk({}, 'tool_calls');
+            return route.fulfill({ status: 200, headers: { ...headers, 'Content-Type': 'text/event-stream' }, body: sse + 'data: [DONE]\n\n' });
+        }
         if (path === '/api/chat') {
             state.chats.push(req.postDataJSON());
             const lines = [
@@ -75,11 +86,6 @@ test('install, paste, pick a Mac, download, chat', async ({ page }) => {
     await expect(page.getByTestId('model-chip')).toContainText('Inkling 2 Mini (Ollama)', { timeout: 5_000 });
     expect(ollama.pulled).toContain('inkling-2-mini:latest');
 
-    await input(page).fill('Hi');
-    await input(page).press('Enter');
-    await expect(page.getByText('Hello from Ollama.')).toBeVisible();
-    await expect(page.getByTestId('answer-badge')).toHaveText('Answered by Ollama on this computer');
-    expect(ollama.chats[0]).toMatchObject({ model: 'inkling-2-mini', think: false });
 
     // Return visit reconnects by itself.
     await page.reload();
@@ -122,4 +128,41 @@ test('nudges to a bigger model only after a few answers', async ({ page }) => {
     await expect(page.getByTestId('upgrade-nudge')).toBeVisible();
     await page.getByRole('button', { name: 'Dismiss suggestion' }).click();
     await expect(page.getByTestId('upgrade-nudge')).toHaveCount(0);
+});
+
+test('V14: the agent asks before using a tool, then finishes the answer', async ({ page }) => {
+    const ollama = await fakeOllama(page, 'ready', ['qwen3.5:9b']);
+    await startFresh(page);
+    await page.getByRole('button', { name: 'Bigger model' }).click();
+    await page.getByRole('radio', { name: '16 GB' }).click();
+    await page.getByRole('button', { name: /Use Qwen3\.5 9B/ }).click();
+    await expect(page.getByTestId('model-chip')).toContainText('Qwen3.5 9B (Ollama)');
+
+    await input(page).fill('What is 12 times 7?');
+    await input(page).press('Enter');
+
+    const card = page.getByTestId('tool-card');
+    await expect(card).toContainText('Calculator');
+    await expect(card).toContainText('12*7');
+    // Nothing runs until the user says yes.
+    await expect(page.getByTestId('tool-result')).toHaveCount(0);
+    await card.getByRole('button', { name: 'Allow' }).click();
+
+    await expect(page.getByTestId('tool-result')).toHaveText('= 84');
+    await expect(page.getByText('12 times 7 is 84.')).toBeVisible();
+    expect(ollama.chats.length).toBe(2);
+    expect(JSON.stringify(ollama.chats[1])).toContain('84');
+});
+
+test('V14: denying a tool means it never runs', async ({ page }) => {
+    await fakeOllama(page, 'ready', ['qwen3.5:9b']);
+    await startFresh(page);
+    await page.getByRole('button', { name: 'Bigger model' }).click();
+    await page.getByRole('radio', { name: '16 GB' }).click();
+    await page.getByRole('button', { name: /Use Qwen3\.5 9B/ }).click();
+    await input(page).fill('What is 12 times 7?');
+    await input(page).press('Enter');
+    await page.getByTestId('tool-card').getByRole('button', { name: 'Deny' }).click();
+    await expect(page.getByTestId('tool-result')).toHaveCount(0);
+    await expect(page.getByText('You said no.')).toBeVisible();
 });

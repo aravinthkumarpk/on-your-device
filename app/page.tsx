@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
+import { lastAssistantMessageIsCompleteWithApprovalResponses } from 'ai';
 import { Gauge, Loader2, Rocket, X } from 'lucide-react';
 import { LocalEnginePanel } from '@components/LocalEnginePanel';
 import { useEngine } from './hooks/useEngine';
-import { toChatTurns, toDisplayTurns } from '@root/lib/engine';
+import { toChatTurns, toDisplayTurns, type ChatTurn } from '@root/lib/engine';
 import { ChatContainer } from '@components/ChatContainer';
 import { ChatInputBar } from '@components/ChatInputBar';
 import { ErrorBoundary } from '@components/ErrorBoundary';
@@ -22,10 +23,14 @@ export const dynamic = 'force-static';
  * queues the first question), then chat. Return visits go straight to chat.
  */
 export default function Page() {
-  const engine = useEngine();
-  const { messages, sendMessage, status, stop, setMessages, error } = useChat({
+  const chatsRef = useRef<ChatTurn[]>([]);
+  const engine = useEngine(() => chatsRef.current);
+  const { messages, sendMessage, status, stop, setMessages, error, addToolApprovalResponse } = useChat({
     transport: engine.transport,
+    // After the user allows or denies a tool, the agent carries on by itself.
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
   });
+  chatsRef.current = toChatTurns(messages, Infinity);
   const [queued, setQueued] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
@@ -159,6 +164,7 @@ export default function Page() {
                 onSend={handleSend}
                 onInterrupt={stop}
                 modelLabel={modelLabel}
+                onToolApproval={(id, approved) => addToolApprovalResponse({ id, approved })}
               />
             ) : (
               <div className="flex-1" />
