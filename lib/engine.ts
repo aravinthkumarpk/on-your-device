@@ -7,7 +7,8 @@ import type { Dtype } from '@root/lib/models';
  */
 export function workerUrlFor(search: string): string {
     const engine = new URLSearchParams(search).get('engine');
-    return engine === 'fake' ? '/fake-worker.js' : '/worker.js';
+    // The fake engine reads test switches (like ?fail=load) from its own URL.
+    return engine === 'fake' ? `/fake-worker.js${search}` : '/worker.js';
 }
 
 /** Plain chat turn sent to the worker. */
@@ -19,8 +20,8 @@ export interface ChatTurn {
 /** Messages the worker sends back. Generation messages carry the request id. */
 export type WorkerEvent =
     | { status: 'loading'; data?: string }
-    | { status: 'initiate'; file: string; progress: number }
-    | { status: 'progress'; file: string; progress: number }
+    | { status: 'initiate'; file: string; progress: number; loaded?: number; total?: number }
+    | { status: 'progress'; file: string; progress: number; loaded?: number; total?: number }
     | { status: 'done'; file: string }
     | { status: 'ready' }
     | { status: 'start'; id: string }

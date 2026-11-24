@@ -8,7 +8,7 @@ describe('workerUrlFor', () => {
     });
 
     it('uses the fake worker only for ?engine=fake', () => {
-        expect(workerUrlFor('?engine=fake')).toBe('/fake-worker.js');
-        expect(workerUrlFor('?x=1&engine=fake')).toBe('/fake-worker.js');
+        expect(workerUrlFor('?engine=fake')).toBe('/fake-worker.js?engine=fake');
+        expect(workerUrlFor('?x=1&engine=fake')).toBe('/fake-worker.js?x=1&engine=fake');
     });
 });

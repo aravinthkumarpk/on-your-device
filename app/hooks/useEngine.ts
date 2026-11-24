@@ -1,37 +1,108 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { loadModel, workerUrlFor, type WorkerEvent } from '@root/lib/engine';
-import { detectDevice, pickBrowserModel, type Pick } from '@root/lib/models';
+import {
+    detectDevice,
+    isModelKey,
+    pickBrowserModel,
+    pickByKey,
+    type BrowserModelKey,
+    type DeviceInfo,
+    type Pick,
+} from '@root/lib/models';
+import { formatEta, summarize, type DownloadSummary, type FileProgress } from '@root/lib/download';
 import { WorkerChatTransport } from '@root/lib/worker-transport';
 
-export type EngineStatus = 'initializing' | 'loading' | 'ready' | 'error';
+/**
+ * checking    detecting the device
+ * unsupported no WebGPU, nothing can run
+ * welcome     first visit, waiting for the Start tap
+ * loading     downloading or warming up
+ * ready       chat works
+ * error       loading failed
+ */
+export type EnginePhase = 'checking' | 'unsupported' | 'welcome' | 'loading' | 'ready' | 'error';
 
-export interface EngineProgress {
-    file: string;
-    progress: number;
+export interface DownloadState extends DownloadSummary {
+    eta: string | null;
+    /** Text for the step after the download, like "Warming up...". */
+    stage: string;
+}
+
+const STORAGE_KEY = 'oyd:model';
+
+function readSaved(): BrowserModelKey | null {
+    try {
+        const value = localStorage.getItem(STORAGE_KEY);
+        return isModelKey(value) ? value : null;
+    } catch {
+        return null;
+    }
+}
+
+function save(key: BrowserModelKey) {
+    try {
+        localStorage.setItem(STORAGE_KEY, key);
+    } catch {
+        // Private mode or blocked storage: the app still works, it just asks again next time.
+    }
 }
 
 /**
- * Owns the model worker: picks a model for this device, loads it, and
- * exposes an AI SDK transport for useChat.
+ * Owns the model worker: detects the device, suggests a model, loads it on
+ * Start (or straight away on a return visit) and exposes an AI SDK transport.
  */
 export function useEngine() {
     const workerRef = useRef<Worker | null>(null);
-    const [status, setStatus] = useState<EngineStatus>('initializing');
-    const [progress, setProgress] = useState<EngineProgress | null>(null);
+    const filesRef = useRef<Record<string, FileProgress>>({});
+    const startedAtRef = useRef<number | null>(null);
+    const pickRef = useRef<Pick | null>(null);
+
+    const [phase, setPhase] = useState<EnginePhase>('checking');
+    const [device, setDevice] = useState<DeviceInfo | null>(null);
+    const [suggested, setSuggested] = useState<Pick | null>(null);
+    const [pick, setPick] = useState<Pick | null>(null);
+    const [download, setDownload] = useState<DownloadState | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [tps, setTps] = useState<number | null>(null);
-    const [pick, setPick] = useState<Pick | null>(null);
+    const [lastTps, setLastTps] = useState<number | null>(null);
+    const [isReturning, setIsReturning] = useState(false);
+
+    const handleTps = useCallback((value: number | null) => {
+        setTps(value);
+        if (value !== null) setLastTps(value);
+    }, []);
+
+    const start = useCallback((key?: BrowserModelKey) => {
+        const worker = workerRef.current;
+        if (!worker || !device) return;
+        const chosen = key ? pickByKey(key, device.hasShaderF16) : suggested;
+        if (!chosen) return;
+        pickRef.current = chosen;
+        setPick(chosen);
+        setError(null);
+        filesRef.current = {};
+        startedAtRef.current = null;
+        setDownload({ loadedBytes: 0, totalBytes: chosen.model.downloadGB * 1e9, percent: 0, eta: null, stage: 'Starting download...' });
+        setPhase('loading');
+        // Ask the browser not to evict the model files under storage pressure.
+        navigator.storage?.persist?.().catch(() => undefined);
+        loadModel(worker, { id: chosen.model.id, dtype: chosen.dtype });
+    }, [device, suggested]);
 
     useEffect(() => {
         let cancelled = false;
+        const search = window.location.search;
+        const params = new URLSearchParams(search);
+        const fake = params.get('engine') === 'fake';
+
         let worker: Worker;
         try {
-            worker = new Worker(workerUrlFor(window.location.search), { type: 'module' });
+            worker = new Worker(workerUrlFor(search), { type: 'module' });
         } catch {
-            setStatus('error');
-            setError('Could not start the model worker.');
+            setPhase('error');
+            setError('Could not start the model worker. Try reloading the page.');
             return;
         }
         workerRef.current = worker;
@@ -40,38 +111,69 @@ export function useEngine() {
             const msg = event.data;
             switch (msg.status) {
                 case 'loading':
-                    setStatus('loading');
+                    setDownload((d) => (d ? { ...d, stage: msg.data ?? d.stage } : d));
                     break;
                 case 'initiate':
-                case 'progress':
-                    setProgress({ file: msg.file, progress: msg.progress });
+                case 'progress': {
+                    if (msg.total) {
+                        filesRef.current[msg.file] = { loaded: msg.loaded ?? 0, total: msg.total };
+                        startedAtRef.current ??= performance.now();
+                    }
+                    const expected = (pickRef.current?.model.downloadGB ?? 0) * 1e9;
+                    const summary = summarize(filesRef.current, expected);
+                    const seconds = startedAtRef.current ? (performance.now() - startedAtRef.current) / 1000 : 0;
+                    const rate = seconds > 1 ? summary.loadedBytes / seconds : 0;
+                    setDownload((d) => ({
+                        ...summary,
+                        eta: formatEta(summary.totalBytes - summary.loadedBytes, rate),
+                        stage: d?.stage ?? 'Downloading the model...',
+                    }));
                     break;
-                case 'done':
-                    setProgress(null);
-                    break;
+                }
                 case 'ready':
-                    setStatus('ready');
-                    setProgress(null);
+                    setPhase('ready');
+                    setDownload(null);
+                    if (pickRef.current) save(pickRef.current.key);
                     break;
                 case 'error':
                     // Errors during a reply are shown in the chat by useChat.
                     if (!('id' in msg) || !msg.id) {
-                        setStatus('error');
+                        setPhase('error');
                         setError(msg.data);
+                        setDownload(null);
                     }
                     break;
             }
         });
         worker.addEventListener('error', () => {
-            setStatus('error');
-            setError('The model worker failed to start.');
+            setPhase('error');
+            setError('The model worker failed to start. Try reloading the page.');
         });
 
-        detectDevice().then((device) => {
+        detectDevice().then((info) => {
             if (cancelled) return;
-            const chosen = pickBrowserModel(device);
-            setPick(chosen);
-            loadModel(worker, { id: chosen.model.id, dtype: chosen.dtype });
+            // The fake engine needs no GPU. ?gpu=none simulates a browser without WebGPU.
+            const hasWebGPU = fake ? params.get('gpu') !== 'none' : !!info.hasWebGPU;
+            const detected = { ...info, hasWebGPU };
+            setDevice(detected);
+            if (!hasWebGPU) {
+                setPhase('unsupported');
+                return;
+            }
+            const auto = pickBrowserModel(detected);
+            setSuggested(auto);
+            const saved = readSaved();
+            if (saved) {
+                setIsReturning(true);
+                const chosen = pickByKey(saved, detected.hasShaderF16);
+                pickRef.current = chosen;
+                setPick(chosen);
+                setDownload({ loadedBytes: 0, totalBytes: chosen.model.downloadGB * 1e9, percent: 0, eta: null, stage: 'Loading from this device...' });
+                setPhase('loading');
+                loadModel(worker, { id: chosen.model.id, dtype: chosen.dtype });
+            } else {
+                setPhase('welcome');
+            }
         });
 
         return () => {
@@ -81,7 +183,7 @@ export function useEngine() {
         };
     }, []);
 
-    const transport = useMemo(() => new WorkerChatTransport(() => workerRef.current, setTps), []);
+    const transport = useMemo(() => new WorkerChatTransport(() => workerRef.current, handleTps), [handleTps]);
 
-    return { status, progress, error, tps, pick, transport };
+    return { phase, device, suggested, pick, download, error, tps, lastTps, isReturning, start, transport };
 }
