@@ -2,7 +2,7 @@
 
 import { Calculator, CalendarClock, Search, Wrench } from 'lucide-react';
 import type { ToolView } from '@root/lib/engine';
-import { TOOL_LABELS } from '@root/lib/agent';
+import { TOOL_LABELS } from '@root/lib/tool-labels';
 
 const ICONS: Record<string, typeof Wrench> = {
     calculator: Calculator,

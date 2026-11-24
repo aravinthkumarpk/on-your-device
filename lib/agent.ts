@@ -65,12 +65,6 @@ export function makeTools(getChats: () => ChatTurn[], { needsApproval = true }: 
 
 export type LocalTools = ReturnType<typeof makeTools>;
 
-export const TOOL_LABELS: Record<string, string> = {
-    calculator: 'Calculator',
-    currentDateTime: 'Date and time',
-    searchChat: 'Search this chat',
-};
-
 export function createLocalAgent(model: LanguageModel, getChats: () => ChatTurn[], options?: { needsApproval?: boolean }) {
     return new ToolLoopAgent({
         model,
