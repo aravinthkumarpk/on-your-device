@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useCallback, useState } from 'react';
+import { workerUrlFor } from '@root/lib/engine';
 
 export type WorkerStatus = 'initializing' | 'loading' | 'ready' | 'error';
 
@@ -64,7 +65,7 @@ export function useWorker(): UseWorkerReturn {
         if (typeof window === 'undefined') return;
 
         try {
-            workerRef.current = new Worker('/worker.js', { type: 'module' });
+            workerRef.current = new Worker(workerUrlFor(window.location.search), { type: 'module' });
 
             workerRef.current.onmessage = (event: MessageEvent<WorkerMessage>) => {
                 const { status: workerStatus, data, file, progress: workerProgress, output, thought, tps } = event.data;

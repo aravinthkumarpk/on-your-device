@@ -65,6 +65,8 @@ MIT
 
 ## Credits & Acknowledgements
 
+The full list of code, models and design sources, with their licenses, is in [CREDITS.md](CREDITS.md).
+
 This project builds on the incredible work of the WebML community:
 
 ### Core Technologies
