@@ -55,20 +55,61 @@ export function loadModel(worker: WorkerLike, model: { id: string; dtype: Dtype 
     worker.postMessage({ type: 'load', model });
 }
 
+/** A tool call shown in the chat, with its approval state. */
+export interface ToolView {
+    callId: string;
+    name: string;
+    input: unknown;
+    state: string;
+    approvalId?: string;
+    output?: unknown;
+    errorText?: string;
+}
+
 /** A chat turn for display, with an optional caption like "Chrome's built-in model". */
 export interface DisplayTurn extends ChatTurn {
     badge?: string;
+    tools?: ToolView[];
+}
+
+function toolViews(m: UIMessage): ToolView[] {
+    const views: ToolView[] = [];
+    for (const p of m.parts) {
+        if (!p.type.startsWith('tool-') && p.type !== 'dynamic-tool') continue;
+        const part = p as {
+            type: string;
+            toolName?: string;
+            toolCallId: string;
+            state: string;
+            input?: unknown;
+            output?: unknown;
+            errorText?: string;
+            approval?: { id: string };
+        };
+        views.push({
+            callId: part.toolCallId,
+            name: part.toolName ?? part.type.slice('tool-'.length),
+            input: part.input,
+            state: part.state,
+            approvalId: part.approval?.id,
+            output: part.output,
+            errorText: part.errorText,
+        });
+    }
+    return views;
 }
 
 /** Like toChatTurns, keeping every turn and marking replies from Chrome's model. */
 export function toDisplayTurns(messages: UIMessage[]): DisplayTurn[] {
     const turns: DisplayTurn[] = [];
     for (const m of messages) {
+        const tools = toolViews(m);
         const [turn] = toChatTurns([m], 1);
-        if (!turn) continue;
+        if (!turn && tools.length === 0) continue;
         const engine = (m.metadata as { engine?: string } | undefined)?.engine;
         const badge = engine === 'chrome' ? "Answered by Chrome's built-in model" : engine === 'ollama' ? 'Answered by Ollama on this computer' : undefined;
-        turns.push(badge ? { ...turn, badge } : turn);
+        const base: DisplayTurn = turn ?? { role: m.role, content: '' };
+        turns.push({ ...base, ...(badge ? { badge } : {}), ...(tools.length ? { tools } : {}) });
     }
     return turns;
 }
