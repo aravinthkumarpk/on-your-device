@@ -17,12 +17,24 @@ export interface LocalModel {
     /** Smallest Mac memory it is suggested for. */
     minRamGB: number;
     note: string;
+    /** Tag of a safer model offered next to this one, for when it does not run well. */
+    fallbackTag?: string;
 }
 
 /** One pick per Mac memory size, from the agreed model-per-device table. */
 export const LOCAL_MODELS: LocalModel[] = [
     { tag: 'qwen3.5:4b', label: 'Qwen3.5 4B', downloadGB: 3.4, minRamGB: 8, note: 'Best that fits 8 GB.' },
-    { tag: 'qwen3.5:9b', label: 'Qwen3.5 9B', downloadGB: 6.6, minRamGB: 16, note: 'Top of the small class.' },
+    { tag: 'qwen3.5:9b', label: 'Qwen3.5 9B', downloadGB: 6.6, minRamGB: 16, note: 'Well tested and steady.' },
+    // Qwen3.8 27B squeezed to about 2 bits. The Q2_0 file runs on stock llama.cpp b11556+;
+    // older builds load it but print gibberish, so the 9B stays one click away.
+    {
+        tag: 'hf.co/prism-ml/Ternary-Bonsai-2.5-27B-GGUF:Q2_0',
+        label: 'Bonsai 2.5 27B',
+        downloadGB: 7.6,
+        minRamGB: 16,
+        note: 'A 27B model shrunk to fit 16 GB. Smartest pick for this size.',
+        fallbackTag: 'qwen3.5:9b',
+    },
     { tag: 'gemma4:26b', label: 'Gemma 4 26B-A4B', downloadGB: 18, minRamGB: 24, note: 'Strong all-rounder, fast because only 4B is active.' },
     { tag: 'inkling-2-mini', label: 'Inkling 2 Mini', downloadGB: 16.5, minRamGB: 32, note: 'Best at code. Fast, 3.4B active.' },
     { tag: 'qwen3.8:27b', label: 'Qwen3.8 27B', downloadGB: 17.1, minRamGB: 48, note: 'Most factual. Slower without a drafter.' },
@@ -30,11 +42,21 @@ export const LOCAL_MODELS: LocalModel[] = [
 
 export const RAM_CHOICES = [8, 16, 24, 32, 48] as const;
 
-/** The suggested local model for a Mac with this much memory. */
+/** The suggested local model for a Mac with this much memory. The last match in the list wins. */
 export function pickLocalModel(ramGB: number): LocalModel {
     let best = LOCAL_MODELS[0];
     for (const m of LOCAL_MODELS) if (ramGB >= m.minRamGB) best = m;
     return best;
+}
+
+/** The safer model offered next to `model`, if it has one. */
+export function fallbackFor(model: LocalModel): LocalModel | undefined {
+    return model.fallbackTag ? LOCAL_MODELS.find((m) => m.tag === model.fallbackTag) : undefined;
+}
+
+/** One model per memory size, as the panel suggests them. */
+export function suggestedModels(): LocalModel[] {
+    return LOCAL_MODELS.filter((m) => pickLocalModel(m.minRamGB) === m);
 }
 
 /** The one line that lets this site talk to Ollama and restarts it. Resets on reboot. */
@@ -79,8 +101,10 @@ export async function listLocalModels(fetchFn: Fetch = fetch, base = OLLAMA_URL)
 
 /** True if `tag` (like "qwen3.5:9b" or "inkling-2-mini") is already pulled. */
 export function hasModel(installed: string[], tag: string): boolean {
-    const full = tag.includes(':') ? tag : `${tag}:latest`;
-    return installed.includes(full) || installed.includes(tag);
+    // Ollama may change the case of hf.co tags, so compare without it.
+    const full = (tag.includes(':') ? tag : `${tag}:latest`).toLowerCase();
+    const names = installed.map((n) => n.toLowerCase());
+    return names.includes(full) || names.includes(tag.toLowerCase());
 }
 
 /** Reads newline-delimited JSON from a streaming response. */

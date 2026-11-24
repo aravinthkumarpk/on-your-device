@@ -5,7 +5,9 @@ import {
     isSafari,
     listLocalModels,
     ollamaStreamer,
+    fallbackFor,
     pickLocalModel,
+    suggestedModels,
     probeOllama,
     pullModel,
     type PullProgress,
@@ -54,10 +56,26 @@ describe('probeOllama', () => {
     });
 });
 
+describe('Bonsai 2.5 27B on 16 GB Macs', () => {
+    it('keeps Qwen3.5 9B one click away as the fallback', () => {
+        expect(fallbackFor(pickLocalModel(16))?.tag).toBe('qwen3.5:9b');
+        expect(fallbackFor(pickLocalModel(8))).toBeUndefined();
+    });
+
+    it('lists one suggestion per memory size', () => {
+        expect(suggestedModels().map((m) => m.minRamGB)).toEqual([8, 16, 24, 32, 48]);
+        expect(suggestedModels()[1].label).toBe('Bonsai 2.5 27B');
+    });
+
+    it('finds hf.co models whatever case Ollama reports them in', () => {
+        expect(hasModel(['hf.co/prism-ml/ternary-bonsai-2.5-27b-gguf:Q2_0'], 'hf.co/prism-ml/Ternary-Bonsai-2.5-27B-GGUF:Q2_0')).toBe(true);
+    });
+});
+
 describe('pickLocalModel (by Mac memory)', () => {
     it('follows the agreed table', () => {
         expect(pickLocalModel(8).tag).toBe('qwen3.5:4b');
-        expect(pickLocalModel(16).tag).toBe('qwen3.5:9b');
+        expect(pickLocalModel(16).tag).toBe('hf.co/prism-ml/Ternary-Bonsai-2.5-27B-GGUF:Q2_0');
         expect(pickLocalModel(24).tag).toBe('gemma4:26b');
         expect(pickLocalModel(32).tag).toBe('inkling-2-mini');
         expect(pickLocalModel(48).tag).toBe('qwen3.8:27b');

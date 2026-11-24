@@ -48,6 +48,17 @@ test('skips the download when the model is already pulled', async ({ page }) => 
     await expect(page.getByTestId('model-chip')).toContainText('Qwen3.5 9B (Ollama)');
 });
 
+test('a 16 GB Mac gets Bonsai 2.5 27B from Hugging Face, with Qwen3.5 9B offered as the fallback', async ({ page }) => {
+    const ollama = await fakeOllama(page, 'ready');
+    await startFresh(page);
+    await page.getByRole('button', { name: 'Bigger model' }).click();
+    await page.getByRole('radio', { name: '16 GB' }).click();
+    await expect(page.getByRole('button', { name: /Or download Qwen3\.5 9B/ })).toBeVisible();
+    await page.getByRole('button', { name: /Download Bonsai 2\.5 27B/ }).click();
+    await expect(page.getByTestId('model-chip')).toContainText('Bonsai 2.5 27B (Ollama)', { timeout: 5_000 });
+    expect(ollama.pulled).toContain('hf.co/prism-ml/Ternary-Bonsai-2.5-27B-GGUF:Q2_0');
+});
+
 test('after a reboot, offers one paste to reconnect', async ({ page }) => {
     await fakeOllama(page, 'blocked');
     await startFresh(page);

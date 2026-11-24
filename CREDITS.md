@@ -22,7 +22,7 @@ The app downloads these from Hugging Face at runtime. They are not stored in thi
 
 ## Local engine (optional)
 
-People who connect [Ollama](https://github.com/ollama/ollama) (MIT) can run bigger models on their own computer. The app suggests one per Mac memory size. Ollama downloads them from its own library.
+People who connect [Ollama](https://github.com/ollama/ollama) (MIT) can run bigger models on their own computer. The app suggests one per Mac memory size. Ollama downloads them from its own library, or from Hugging Face for `hf.co/` tags.
 
 | Ollama tag | Made by | License |
 |---|---|---|
@@ -30,6 +30,7 @@ People who connect [Ollama](https://github.com/ollama/ollama) (MIT) can run bigg
 | `gemma4:26b` | Google DeepMind | Apache 2.0 |
 | `inkling-2-mini` | Thinking Machines | Apache 2.0, plus an acceptable use policy |
 | `qwen3.8:27b` | Qwen team, Alibaba Cloud | Apache 2.0 |
+| [`hf.co/prism-ml/Ternary-Bonsai-2.5-27B-GGUF:Q2_0`](https://huggingface.co/prism-ml/Ternary-Bonsai-2.5-27B-GGUF) | PrismML, based on Qwen3.8 27B by the Qwen team | Apache 2.0 |
 
 ## Browser-provided model
 

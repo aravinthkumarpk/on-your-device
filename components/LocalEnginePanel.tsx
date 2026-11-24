@@ -4,13 +4,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, Copy, Download, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@root/components/ui/dialog';
 import {
-    LOCAL_MODELS,
     RAM_CHOICES,
     allowSiteCommand,
     hasModel,
     isSafari,
     listLocalModels,
+    fallbackFor,
     pickLocalModel,
+    suggestedModels,
     probeOllama,
     pullModel,
     type LocalModel,
@@ -40,6 +41,7 @@ export function LocalEnginePanel({
     const [installed, setInstalled] = useState<string[]>([]);
     const [progress, setProgress] = useState<{ completed: number; total: number; status: string } | null>(null);
     const [failure, setFailure] = useState<string | null>(null);
+    const [chosen, setChosen] = useState<LocalModel | null>(null);
     const [copied, setCopied] = useState(false);
     const [origin, setOrigin] = useState('');
     const [safari, setSafari] = useState(false);
@@ -86,12 +88,14 @@ export function LocalEnginePanel({
     }, [command]);
 
     const model = ram ? pickLocalModel(ram) : null;
+    const fallback = model ? fallbackFor(model) : undefined;
 
     const download = async (m: LocalModel) => {
         if (hasModel(installed, m.tag)) {
             onConnect(m);
             return;
         }
+        setChosen(m);
         setStep('pulling');
         setFailure(null);
         setProgress({ completed: 0, total: m.downloadGB * 1e9, status: 'Starting...' });
@@ -196,12 +200,23 @@ export function LocalEnginePanel({
                                         </span>
                                     </button>
                                 )}
+                                {fallback && (
+                                    <button
+                                        type="button"
+                                        onClick={() => download(fallback)}
+                                        className="w-full rounded-lg px-1 text-left text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                                    >
+                                        {hasModel(installed, fallback.tag)
+                                            ? `Use ${fallback.label} instead`
+                                            : `Or download ${fallback.label} (${formatBytes(fallback.downloadGB * 1e9)}). ${fallback.note}`}
+                                    </button>
+                                )}
                             </div>
                         )}
 
                         {step === 'pulling' && progress && (
                             <div className="space-y-2">
-                                <p className="font-medium">Downloading {model?.label} through Ollama</p>
+                                <p className="font-medium">Downloading {chosen?.label} through Ollama</p>
                                 <div role="progressbar" aria-label="Ollama download" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} className="h-2 overflow-hidden rounded-full bg-secondary">
                                     <div className="h-full w-full origin-left rounded-full bg-primary transition-transform duration-300 ease-linear" style={{ transform: `scaleX(${percent / 100})` }} />
                                 </div>
@@ -216,7 +231,7 @@ export function LocalEnginePanel({
                             <div role="alert" className="space-y-2">
                                 <p className="font-medium">The download stopped</p>
                                 <p className="text-muted-foreground">{failure}</p>
-                                <button type="button" onClick={() => model && download(model)} className="rounded-lg border border-border px-3 py-1.5">
+                                <button type="button" onClick={() => chosen && download(chosen)} className="rounded-lg border border-border px-3 py-1.5">
                                     Resume
                                 </button>
                             </div>
@@ -225,7 +240,7 @@ export function LocalEnginePanel({
                 )}
 
                 <p className="text-xs text-muted-foreground">
-                    Picks: {LOCAL_MODELS.map((m) => `${m.minRamGB === 48 ? '48+' : m.minRamGB} GB ${m.label}`).join(', ')}.
+                    Picks: {suggestedModels().map((m) => `${m.minRamGB === 48 ? '48+' : m.minRamGB} GB ${m.label}`).join(', ')}.
                 </p>
             </DialogContent>
         </Dialog>
