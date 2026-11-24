@@ -20,6 +20,10 @@ The app downloads these from Hugging Face at runtime. They are not stored in thi
 | `onnx-community/Qwen3.5-2B-ONNX-OPT` | [Qwen team, Alibaba Cloud](https://huggingface.co/Qwen/Qwen3.5-2B) | [ONNX Community](https://huggingface.co/onnx-community) | Apache 2.0 |
 | `onnx-community/Qwen3.5-4B-ONNX-OPT` | [Qwen team, Alibaba Cloud](https://huggingface.co/Qwen/Qwen3.5-4B) | [ONNX Community](https://huggingface.co/onnx-community) | Apache 2.0 |
 
+## Browser-provided model
+
+In Chrome on desktop, if Google's Gemini Nano is already downloaded, the app can use it through Chrome's [Prompt API](https://developer.chrome.com/docs/ai/prompt-api) while the main model downloads. Replies from it are labelled. The app never starts its download. It is subject to [Google's Generative AI Prohibited Uses Policy](https://policies.google.com/terms/generative-ai/use-policy).
+
 ## Libraries
 
 | Library | Author | License | What it does here |

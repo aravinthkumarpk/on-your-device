@@ -13,6 +13,14 @@ import {
 } from '@root/lib/models';
 import { formatEta, summarize, type DownloadSummary, type FileProgress } from '@root/lib/download';
 import { WorkerChatTransport } from '@root/lib/worker-transport';
+import {
+    RoutingTransport,
+    TextStreamerTransport,
+    chromeStreamer,
+    fakeChromeStreamer,
+    isChromeModelReady,
+    type TextStreamer,
+} from '@root/lib/chrome-bridge';
 
 /**
  * checking    detecting the device
@@ -68,6 +76,9 @@ export function useEngine() {
     const [tps, setTps] = useState<number | null>(null);
     const [lastTps, setLastTps] = useState<number | null>(null);
     const [isReturning, setIsReturning] = useState(false);
+    const [bridge, setBridge] = useState<TextStreamer | null>(null);
+    const phaseRef = useRef<EnginePhase>('checking');
+    phaseRef.current = phase;
 
     const handleTps = useCallback((value: number | null) => {
         setTps(value);
@@ -150,6 +161,15 @@ export function useEngine() {
             setError('The model worker failed to start. Try reloading the page.');
         });
 
+        // Chrome's built-in model, only if it is already on this device.
+        if (fake) {
+            if (params.get('chrome') === 'ready') setBridge(() => fakeChromeStreamer);
+        } else {
+            isChromeModelReady().then((ready) => {
+                if (ready && !cancelled) setBridge(() => chromeStreamer);
+            });
+        }
+
         detectDevice().then((info) => {
             if (cancelled) return;
             // The fake engine needs no GPU. ?gpu=none simulates a browser without WebGPU.
@@ -183,7 +203,19 @@ export function useEngine() {
         };
     }, []);
 
-    const transport = useMemo(() => new WorkerChatTransport(() => workerRef.current, handleTps), [handleTps]);
+    const workerTransport = useMemo(() => new WorkerChatTransport(() => workerRef.current, handleTps), [handleTps]);
+    const bridgeTransport = useMemo(() => (bridge ? new TextStreamerTransport(bridge) : null), [bridge]);
+    const bridgeRef = useRef(bridgeTransport);
+    bridgeRef.current = bridgeTransport;
 
-    return { phase, device, suggested, pick, download, error, tps, lastTps, isReturning, start, transport };
+    // Until our model is ready, Chrome's model (if present) answers instead.
+    const transport = useMemo(
+        () => new RoutingTransport(() => (phaseRef.current !== 'ready' && bridgeRef.current) || workerTransport),
+        [workerTransport],
+    );
+
+    /** Chrome's model can answer right now, while ours is still loading. */
+    const bridgeActive = !!bridgeTransport && phase === 'loading';
+
+    return { phase, device, suggested, pick, download, error, tps, lastTps, isReturning, start, transport, bridgeActive };
 }

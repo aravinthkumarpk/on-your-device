@@ -23,7 +23,7 @@ import {
 import { Loader } from '@root/components/ai-elements/loader';
 import { Suggestion, Suggestions } from '@root/components/ai-elements/suggestion';
 import { CopyIcon, ThumbsUpIcon, StopCircleIcon, SparklesIcon, Zap } from 'lucide-react';
-import { type ChatTurn as ChatMessage } from '@root/lib/engine';
+import { type DisplayTurn as ChatMessage } from '@root/lib/engine';
 import { cn } from '@root/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -181,6 +181,9 @@ export function ChatContainer({
                                                 )}
                                                 <MessageResponse>{cleanTags(parsed.response)}</MessageResponse>
                                             </MessageContent>
+                                            {isAssistant && message.badge && (
+                                                <p className="mt-1 text-xs text-muted-foreground" data-testid="answer-badge">{message.badge}</p>
+                                            )}
                                             {isAssistant && (
                                                 <MessageToolbar>
                                                     <MessageActions>
