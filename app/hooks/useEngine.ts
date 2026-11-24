@@ -21,6 +21,7 @@ import {
     isChromeModelReady,
     type TextStreamer,
 } from '@root/lib/chrome-bridge';
+import { LOCAL_MODELS, hasModel, listLocalModels, ollamaStreamer, probeOllama, type LocalModel } from '@root/lib/ollama';
 
 /**
  * checking    detecting the device
@@ -39,6 +40,7 @@ export interface DownloadState extends DownloadSummary {
 }
 
 const STORAGE_KEY = 'oyd:model';
+const LOCAL_KEY = 'oyd:local';
 
 function readSaved(): BrowserModelKey | null {
     try {
@@ -77,6 +79,9 @@ export function useEngine() {
     const [lastTps, setLastTps] = useState<number | null>(null);
     const [isReturning, setIsReturning] = useState(false);
     const [bridge, setBridge] = useState<TextStreamer | null>(null);
+    const [local, setLocal] = useState<LocalModel | null>(null);
+    /** Ollama was used last time but now blocks us (its setting resets on reboot). */
+    const [localNeedsReconnect, setLocalNeedsReconnect] = useState(false);
     const phaseRef = useRef<EnginePhase>('checking');
     phaseRef.current = phase;
 
@@ -161,6 +166,22 @@ export function useEngine() {
             setError('The model worker failed to start. Try reloading the page.');
         });
 
+        // Reconnect to Ollama if it was used last time.
+        let savedLocal: string | null = null;
+        try {
+            savedLocal = localStorage.getItem(LOCAL_KEY);
+        } catch {
+            savedLocal = null;
+        }
+        const savedModel = LOCAL_MODELS.find((m) => m.tag === savedLocal);
+        if (savedModel) {
+            probeOllama().then(async (state) => {
+                if (cancelled) return;
+                if (state === 'ready' && hasModel(await listLocalModels().catch(() => []), savedModel.tag)) setLocal(savedModel);
+                else if (state === 'blocked') setLocalNeedsReconnect(true);
+            });
+        }
+
         // Chrome's built-in model, only if it is already on this device.
         if (fake) {
             if (params.get('chrome') === 'ready') setBridge(() => fakeChromeStreamer);
@@ -207,15 +228,34 @@ export function useEngine() {
     const bridgeTransport = useMemo(() => (bridge ? new TextStreamerTransport(bridge) : null), [bridge]);
     const bridgeRef = useRef(bridgeTransport);
     bridgeRef.current = bridgeTransport;
+    const localTransport = useMemo(() => (local ? new TextStreamerTransport(ollamaStreamer(local.tag), 'ollama') : null), [local]);
+    const localRef = useRef(localTransport);
+    localRef.current = localTransport;
 
-    // Until our model is ready, Chrome's model (if present) answers instead.
+    // Ollama wins when connected. Until our model is ready, Chrome's model (if present) answers.
     const transport = useMemo(
-        () => new RoutingTransport(() => (phaseRef.current !== 'ready' && bridgeRef.current) || workerTransport),
+        () => new RoutingTransport(
+            () => localRef.current || (phaseRef.current !== 'ready' && bridgeRef.current) || workerTransport,
+        ),
         [workerTransport],
     );
+
+    const connectLocal = useCallback((model: LocalModel | null) => {
+        setLocal(model);
+        setLocalNeedsReconnect(false);
+        try {
+            if (model) localStorage.setItem(LOCAL_KEY, model.tag);
+            else localStorage.removeItem(LOCAL_KEY);
+        } catch {
+            // ignore
+        }
+    }, []);
 
     /** Chrome's model can answer right now, while ours is still loading. */
     const bridgeActive = !!bridgeTransport && phase === 'loading';
 
-    return { phase, device, suggested, pick, download, error, tps, lastTps, isReturning, start, transport, bridgeActive };
+    return {
+        phase, device, suggested, pick, download, error, tps, lastTps, isReturning, start, transport, bridgeActive,
+        local, connectLocal, localNeedsReconnect,
+    };
 }

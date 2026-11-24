@@ -136,7 +136,7 @@ export function ChatContainer({
                         icon={<SparklesIcon className="size-8" />}
                     >
                         <div className="mt-6 w-full max-w-xl">
-                            <Suggestions className="justify-center flex-wrap">
+                            <Suggestions className="w-full flex-wrap justify-center whitespace-normal">
                                 {SUGGESTIONS.map((suggestion) => (
                                     <Suggestion
                                         key={suggestion}
