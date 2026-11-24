@@ -40,6 +40,10 @@ The app downloads these from Hugging Face at runtime. They are not stored in thi
 
 - Loading Qwen3.5 on WebGPU in `public/worker.js` follows the official [Qwen3.5 WebGPU demo](https://huggingface.co/spaces/webml-community/Qwen3.5-WebGPU) by the WebML Community.
 
+## Design guidance
+
+- The onboarding screens were reviewed against [Emil Kowalski's design engineering skills](https://github.com/emilkowalski/skills) (MIT): easing, durations, press states, and the Break UI worst-case pass.
+
 ## Communities
 
 - [ONNX Community](https://huggingface.co/onnx-community) for the browser-ready model conversions.

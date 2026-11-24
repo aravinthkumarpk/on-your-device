@@ -39,6 +39,8 @@ export const BROWSER_MODELS = {
 export type BrowserModelKey = keyof typeof BROWSER_MODELS;
 
 export interface DeviceInfo {
+    /** The browser gave us a WebGPU adapter. */
+    hasWebGPU?: boolean;
     /** Phone or tablet, from userAgentData.mobile or the user agent string. */
     isMobile: boolean;
     /** GPU supports the shader-f16 feature. */
@@ -71,6 +73,20 @@ export function pickBrowserModel(device: DeviceInfo): Pick {
     return { key: 'default', model: BROWSER_MODELS.default, dtype, reason: 'Good balance of quality and download size.' };
 }
 
+/** The pick for a model the user chose themselves. */
+export function pickByKey(key: BrowserModelKey, hasShaderF16: boolean): Pick {
+    return {
+        key,
+        model: BROWSER_MODELS[key],
+        dtype: hasShaderF16 ? 'q4f16' : 'q4',
+        reason: 'You picked this one.',
+    };
+}
+
+export function isModelKey(value: unknown): value is BrowserModelKey {
+    return typeof value === 'string' && value in BROWSER_MODELS;
+}
+
 /** Reads DeviceInfo from the browser. Only call on the client. */
 export async function detectDevice(): Promise<DeviceInfo> {
     const nav = navigator as unknown as {
@@ -81,11 +97,13 @@ export async function detectDevice(): Promise<DeviceInfo> {
     };
     const isMobile = nav.userAgentData?.mobile ?? /Android|iPhone|iPad|iPod|Mobile/i.test(nav.userAgent);
     let hasShaderF16 = false;
+    let hasWebGPU = false;
     try {
         const adapter = await nav.gpu?.requestAdapter();
+        hasWebGPU = !!adapter;
         hasShaderF16 = !!adapter?.features.has('shader-f16');
     } catch {
-        hasShaderF16 = false;
+        hasWebGPU = false;
     }
-    return { isMobile, hasShaderF16, deviceMemoryGB: nav.deviceMemory };
+    return { hasWebGPU, isMobile, hasShaderF16, deviceMemoryGB: nav.deviceMemory };
 }

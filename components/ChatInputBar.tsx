@@ -21,6 +21,8 @@ export interface ChatInputBarProps {
     isGenerating: boolean;
     hasMessages: boolean;
     modelLabel?: string;
+    /** Overrides the placeholder, e.g. while a question is queued. */
+    placeholder?: string;
 }
 
 export function ChatInputBar({
@@ -31,6 +33,7 @@ export function ChatInputBar({
     isGenerating,
     hasMessages,
     modelLabel = 'The model',
+    placeholder,
 }: ChatInputBarProps) {
     const handleSubmit = useCallback(
         (message: PromptInputMessage) => {
@@ -50,7 +53,7 @@ export function ChatInputBar({
                     className="rounded-2xl border border-border/40 bg-background/50 backdrop-blur-sm p-2 shadow-sm transition-all focus-within:border-primary/50 focus-within:bg-background/70 focus-within:shadow-md"
                 >
                     <PromptInputTextarea
-                        placeholder={disabled ? "Waiting for model to load..." : `Message ${modelLabel}...`}
+                        placeholder={placeholder ?? `Message ${modelLabel}...`}
                         disabled={disabled && !isGenerating}
                         className={cn(
                             "min-h-[60px] resize-none bg-transparent px-4 py-3",
@@ -95,7 +98,7 @@ export function ChatInputBar({
                 </PromptInput>
 
                 <p className="mt-2 text-center text-xs text-muted-foreground">
-                    {modelLabel} running locally in your browser with WebGPU
+                    Runs on your device. Nothing you type is sent anywhere.
                 </p>
             </div>
         </div>

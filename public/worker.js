@@ -114,7 +114,13 @@ function handleProgress(event) {
   if (event.status === "initiate") {
     self.postMessage({ status: "initiate", file: event.file, progress: 0 });
   } else if (event.status === "progress" && event.total) {
-    self.postMessage({ status: "progress", file: event.file, progress: Math.round((event.loaded / event.total) * 100) });
+    self.postMessage({
+      status: "progress",
+      file: event.file,
+      progress: Math.round((event.loaded / event.total) * 100),
+      loaded: event.loaded,
+      total: event.total,
+    });
   } else if (event.status === "done") {
     self.postMessage({ status: "done", file: event.file });
   }

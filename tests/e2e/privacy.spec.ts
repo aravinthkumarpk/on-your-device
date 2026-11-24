@@ -1,4 +1,5 @@
 import { expect, test, type Request } from '@playwright/test';
+import { startFresh } from './helpers';
 
 // V1: the page makes no tracking or third-party requests.
 // With the fake engine there is no model download, so every request
@@ -10,8 +11,7 @@ test('only talks to its own origin', async ({ page, baseURL }) => {
     const requests: string[] = [];
     page.on('request', (req: Request) => requests.push(req.url()));
 
-    await page.goto('/?engine=fake');
-    await expect(page.getByRole('textbox')).toBeEnabled();
+    await startFresh(page);
     await page.waitForLoadState('networkidle');
 
     const origin = new URL(baseURL!).origin;
