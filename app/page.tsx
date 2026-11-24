@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { Gauge, Loader2 } from 'lucide-react';
 import { useEngine } from './hooks/useEngine';
-import { toChatTurns } from '@root/lib/engine';
+import { toChatTurns, toDisplayTurns } from '@root/lib/engine';
 import { ChatContainer } from '@components/ChatContainer';
 import { ChatInputBar } from '@components/ChatInputBar';
 import { ErrorBoundary } from '@components/ErrorBoundary';
@@ -32,7 +32,7 @@ export default function Page() {
   const streaming = isGenerating && last?.role === 'assistant' ? last : null;
 
   const history = useMemo(
-    () => toChatTurns(streaming ? messages.slice(0, -1) : messages, Infinity),
+    () => toDisplayTurns(streaming ? messages.slice(0, -1) : messages),
     [messages, streaming],
   );
   const currentResponse = streaming ? toChatTurns([streaming])[0]?.content ?? '' : '';
@@ -49,9 +49,9 @@ export default function Page() {
   }, [engine.phase, queued, sendMessage]);
 
   const handleSend = useCallback((content: string) => {
-    if (engine.phase === 'ready') sendMessage({ text: content });
+    if (engine.phase === 'ready' || engine.bridgeActive) sendMessage({ text: content });
     else if (engine.phase === 'loading') setQueued(content);
-  }, [engine.phase, sendMessage]);
+  }, [engine.phase, engine.bridgeActive, sendMessage]);
 
   const handleClear = useCallback(() => {
     stop();
@@ -59,8 +59,10 @@ export default function Page() {
   }, [stop, setMessages]);
 
   const modelLabel = engine.pick?.model.label;
-  const canType = engine.phase === 'ready' || (engine.phase === 'loading' && !queued);
-  const hasAnswer = messages.some((m) => m.role === 'assistant') && !isGenerating;
+  const canType = engine.phase === 'ready' || engine.bridgeActive || (engine.phase === 'loading' && !queued);
+  const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
+  const hasAnswer = !!lastAssistant && !isGenerating && engine.phase === 'ready'
+    && (lastAssistant.metadata as { engine?: string } | undefined)?.engine !== 'chrome';
 
   if (engine.phase === 'checking') {
     return <div className="flex h-screen items-center justify-center" aria-busy="true"><Loader2 className="size-5 animate-spin text-muted-foreground" aria-label="Loading" /></div>;
@@ -98,11 +100,17 @@ export default function Page() {
 
         {(engine.phase === 'loading' || engine.phase === 'ready' || engine.phase === 'error') && (
           <>
-            {engine.phase === 'loading' && engine.download && modelLabel && messages.length === 0 && (
+            {engine.phase === 'loading' && engine.download && modelLabel && (messages.length === 0 || engine.bridgeActive) && (
               <GettingReady modelLabel={modelLabel} download={engine.download} queued={queued} isReturning={engine.isReturning} />
             )}
             {engine.phase === 'error' && (
               <LoadError message={engine.error ?? 'Something went wrong.'} current={engine.pick?.key} onRetry={engine.start} />
+            )}
+
+            {engine.bridgeActive && (
+              <p className="mx-auto mt-3 max-w-xl px-4 text-center text-sm text-muted-foreground" data-testid="bridge-note">
+                Chrome&apos;s built-in model will answer until {modelLabel} is ready.
+              </p>
             )}
 
             {engine.phase === 'ready' || messages.length > 0 ? (
@@ -145,6 +153,7 @@ export default function Page() {
                 modelLabel={modelLabel}
                 placeholder={
                   engine.phase === 'error' ? 'Pick a model above to continue'
+                    : engine.bridgeActive ? 'Ask anything, Chrome answers for now...'
                     : queued ? 'Your question is queued...'
                     : engine.phase === 'loading' ? 'Type your first question...'
                     : undefined

@@ -54,3 +54,20 @@ export function toChatTurns(messages: UIMessage[], limit = 10): ChatTurn[] {
 export function loadModel(worker: WorkerLike, model: { id: string; dtype: Dtype }) {
     worker.postMessage({ type: 'load', model });
 }
+
+/** A chat turn for display, with an optional caption like "Chrome's built-in model". */
+export interface DisplayTurn extends ChatTurn {
+    badge?: string;
+}
+
+/** Like toChatTurns, keeping every turn and marking replies from Chrome's model. */
+export function toDisplayTurns(messages: UIMessage[]): DisplayTurn[] {
+    const turns: DisplayTurn[] = [];
+    for (const m of messages) {
+        const [turn] = toChatTurns([m], 1);
+        if (!turn) continue;
+        const fromChrome = (m.metadata as { engine?: string } | undefined)?.engine === 'chrome';
+        turns.push(fromChrome ? { ...turn, badge: "Answered by Chrome's built-in model" } : turn);
+    }
+    return turns;
+}
