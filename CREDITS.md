@@ -20,6 +20,17 @@ The app downloads these from Hugging Face at runtime. They are not stored in thi
 | `onnx-community/Qwen3.5-2B-ONNX-OPT` | [Qwen team, Alibaba Cloud](https://huggingface.co/Qwen/Qwen3.5-2B) | [ONNX Community](https://huggingface.co/onnx-community) | Apache 2.0 |
 | `onnx-community/Qwen3.5-4B-ONNX-OPT` | [Qwen team, Alibaba Cloud](https://huggingface.co/Qwen/Qwen3.5-4B) | [ONNX Community](https://huggingface.co/onnx-community) | Apache 2.0 |
 
+## Local engine (optional)
+
+People who connect [Ollama](https://github.com/ollama/ollama) (MIT) can run bigger models on their own computer. The app suggests one per Mac memory size. Ollama downloads them from its own library.
+
+| Ollama tag | Made by | License |
+|---|---|---|
+| `qwen3.5:4b`, `qwen3.5:9b` | Qwen team, Alibaba Cloud | Apache 2.0 |
+| `gemma4:26b` | Google DeepMind | Apache 2.0 |
+| `inkling-2-mini` | Thinking Machines | Apache 2.0, plus an acceptable use policy |
+| `qwen3.8:27b` | Qwen team, Alibaba Cloud | Apache 2.0 |
+
 ## Browser-provided model
 
 In Chrome on desktop, if Google's Gemini Nano is already downloaded, the app can use it through Chrome's [Prompt API](https://developer.chrome.com/docs/ai/prompt-api) while the main model downloads. Replies from it are labelled. The app never starts its download. It is subject to [Google's Generative AI Prohibited Uses Policy](https://policies.google.com/terms/generative-ai/use-policy).

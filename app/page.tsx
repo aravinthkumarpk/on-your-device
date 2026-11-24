@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
-import { Gauge, Loader2 } from 'lucide-react';
+import { Gauge, Loader2, Rocket, X } from 'lucide-react';
+import { LocalEnginePanel } from '@components/LocalEnginePanel';
 import { useEngine } from './hooks/useEngine';
 import { toChatTurns, toDisplayTurns } from '@root/lib/engine';
 import { ChatContainer } from '@components/ChatContainer';
@@ -26,6 +27,8 @@ export default function Page() {
     transport: engine.transport,
   });
   const [queued, setQueued] = useState<string | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
 
   const isGenerating = status === 'submitted' || status === 'streaming';
   const last = messages[messages.length - 1];
@@ -49,17 +52,20 @@ export default function Page() {
   }, [engine.phase, queued, sendMessage]);
 
   const handleSend = useCallback((content: string) => {
-    if (engine.phase === 'ready' || engine.bridgeActive) sendMessage({ text: content });
+    if (engine.local || engine.phase === 'ready' || engine.bridgeActive) sendMessage({ text: content });
     else if (engine.phase === 'loading') setQueued(content);
-  }, [engine.phase, engine.bridgeActive, sendMessage]);
+  }, [engine.local, engine.phase, engine.bridgeActive, sendMessage]);
 
   const handleClear = useCallback(() => {
     stop();
     setMessages([]);
   }, [stop, setMessages]);
 
-  const modelLabel = engine.pick?.model.label;
-  const canType = engine.phase === 'ready' || engine.bridgeActive || (engine.phase === 'loading' && !queued);
+  const modelLabel = engine.local?.label ?? engine.pick?.model.label;
+  const canType = !!engine.local || engine.phase === 'ready' || engine.bridgeActive || (engine.phase === 'loading' && !queued);
+  const canUpgrade = !engine.device?.isMobile && (engine.phase === 'ready' || engine.phase === 'loading');
+  const answers = messages.filter((m) => m.role === 'assistant').length;
+  const showNudge = canUpgrade && !engine.local && answers >= 3 && !nudgeDismissed && !isGenerating;
   const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
   const hasAnswer = !!lastAssistant && !isGenerating && engine.phase === 'ready'
     && (lastAssistant.metadata as { engine?: string } | undefined)?.engine !== 'chrome';
@@ -76,10 +82,24 @@ export default function Page() {
             <h1 className="text-xl font-semibold tracking-[-0.02em]">OnYourDevice</h1>
             <div className="flex items-center gap-2">
               {modelLabel && engine.phase !== 'welcome' && (
-                <span className="rounded-full border border-border/60 px-3 py-1 text-sm text-muted-foreground" data-testid="model-chip">
+                <span className="flex items-center gap-1 rounded-full border border-border/60 px-3 py-1 text-sm text-muted-foreground" data-testid="model-chip">
                   {modelLabel}
-                  {engine.phase === 'loading' && ' (loading)'}
+                  {engine.local ? ' (Ollama)' : engine.phase === 'loading' ? ' (loading)' : ''}
+                  {engine.local && (
+                    <button type="button" onClick={() => engine.connectLocal(null)} aria-label="Stop using Ollama" className="-mr-1 rounded-full p-0.5 hover:text-foreground">
+                      <X className="size-3.5" />
+                    </button>
+                  )}
                 </span>
+              )}
+              {canUpgrade && !engine.local && (
+                <button
+                  type="button"
+                  onClick={() => setPanelOpen(true)}
+                  className="hidden items-center gap-1 rounded-full px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:flex"
+                >
+                  <Rocket className="size-4" aria-hidden /> Bigger model
+                </button>
               )}
               {engine.tps !== null && isGenerating && (
                 <span className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm tabular-nums text-primary" aria-label="Speed">
@@ -91,6 +111,22 @@ export default function Page() {
             </div>
           </div>
         </header>
+
+        <LocalEnginePanel
+          open={panelOpen}
+          onOpenChange={setPanelOpen}
+          onConnect={(model) => {
+            engine.connectLocal(model);
+            setPanelOpen(false);
+          }}
+        />
+
+        {engine.localNeedsReconnect && !engine.local && (
+          <div className="mx-auto mt-3 flex w-full max-w-4xl items-center gap-2 px-4 text-sm" data-testid="reconnect-banner">
+            <span className="text-muted-foreground">Welcome back. Ollama needs one paste to reconnect.</span>
+            <button type="button" onClick={() => setPanelOpen(true)} className="font-medium underline underline-offset-4">Reconnect</button>
+          </div>
+        )}
 
         {engine.phase === 'unsupported' && <Unsupported />}
 
@@ -134,6 +170,19 @@ export default function Page() {
                 isSmall={engine.pick?.key === 'small'}
                 onUseSmall={() => engine.start('small')}
               />
+            )}
+
+            {showNudge && (
+              <div className="mx-auto mt-2 flex w-full max-w-4xl items-center gap-2 px-4" data-testid="upgrade-nudge">
+                <div className="flex flex-1 items-center gap-2 rounded-xl border border-border bg-secondary/40 px-3 py-2 text-sm">
+                  <Rocket className="size-4 shrink-0" aria-hidden />
+                  <span className="flex-1">Want a bigger brain? Connect Ollama in 3 steps.</span>
+                  <button type="button" onClick={() => setPanelOpen(true)} className="font-medium underline underline-offset-4">Show me</button>
+                  <button type="button" onClick={() => setNudgeDismissed(true)} aria-label="Dismiss suggestion" className="rounded p-0.5 text-muted-foreground hover:text-foreground">
+                    <X className="size-4" />
+                  </button>
+                </div>
+              </div>
             )}
 
             {error && (

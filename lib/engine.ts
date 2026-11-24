@@ -66,8 +66,9 @@ export function toDisplayTurns(messages: UIMessage[]): DisplayTurn[] {
     for (const m of messages) {
         const [turn] = toChatTurns([m], 1);
         if (!turn) continue;
-        const fromChrome = (m.metadata as { engine?: string } | undefined)?.engine === 'chrome';
-        turns.push(fromChrome ? { ...turn, badge: "Answered by Chrome's built-in model" } : turn);
+        const engine = (m.metadata as { engine?: string } | undefined)?.engine;
+        const badge = engine === 'chrome' ? "Answered by Chrome's built-in model" : engine === 'ollama' ? 'Answered by Ollama on this computer' : undefined;
+        turns.push(badge ? { ...turn, badge } : turn);
     }
     return turns;
 }

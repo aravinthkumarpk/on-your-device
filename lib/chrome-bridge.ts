@@ -71,17 +71,21 @@ export const fakeChromeStreamer: TextStreamer = async function* (_turns, signal)
     }
 };
 
-/** Chat transport over a TextStreamer. Marks replies with { engine: 'chrome' }. */
+/** Chat transport over a TextStreamer. Marks replies with { engine } (default 'chrome'). */
 export class TextStreamerTransport implements ChatTransport<UIMessage> {
-    constructor(private readonly streamer: TextStreamer) {}
+    constructor(
+        private readonly streamer: TextStreamer,
+        private readonly engine: string = 'chrome',
+    ) {}
 
     async sendMessages({ messages, abortSignal }: Parameters<ChatTransport<UIMessage>['sendMessages']>[0]) {
         const streamer = this.streamer;
+        const engine = this.engine;
         const turns = toChatTurns(messages);
         return new ReadableStream<UIMessageChunk>({
             async start(controller) {
-                const id = 'chrome-text';
-                controller.enqueue({ type: 'start', messageMetadata: { engine: 'chrome' } });
+                const id = `${engine}-text`;
+                controller.enqueue({ type: 'start', messageMetadata: { engine } });
                 controller.enqueue({ type: 'text-start', id });
                 try {
                     for await (const delta of streamer(turns, abortSignal)) {
