@@ -37,7 +37,8 @@ export const LOCAL_MODELS: LocalModel[] = [
     },
     { tag: 'gemma4:26b', label: 'Gemma 4 26B-A4B', downloadGB: 18, minRamGB: 24, note: 'Strong all-rounder, fast because only 4B is active.' },
     { tag: 'inkling-2-mini', label: 'Inkling 2 Mini', downloadGB: 16.5, minRamGB: 32, note: 'Best at code. Fast, 3.4B active.' },
-    { tag: 'qwen3.8:27b', label: 'Qwen3.8 27B', downloadGB: 17.1, minRamGB: 48, note: 'Most factual. Slower without a drafter.' },
+    { tag: 'qwen3.6:35b-a3b', label: 'Qwen3.6 35B-A3B', downloadGB: 23, minRamGB: 48, note: 'Much faster, only 3B active. Top of an independent small-model test.' },
+    { tag: 'qwen3.8:27b', label: 'Qwen3.8 27B', downloadGB: 17.1, minRamGB: 48, note: 'Most factual. Slower without a drafter.', fallbackTag: 'qwen3.6:35b-a3b' },
 ];
 
 export const RAM_CHOICES = [8, 16, 24, 32, 48] as const;

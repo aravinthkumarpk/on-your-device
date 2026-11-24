@@ -60,6 +60,7 @@ describe('Bonsai 2.5 27B on 16 GB Macs', () => {
     it('keeps Qwen3.5 9B one click away as the fallback', () => {
         expect(fallbackFor(pickLocalModel(16))?.tag).toBe('qwen3.5:9b');
         expect(fallbackFor(pickLocalModel(8))).toBeUndefined();
+        expect(fallbackFor(pickLocalModel(48))?.tag).toBe('qwen3.6:35b-a3b');
     });
 
     it('lists one suggestion per memory size', () => {
