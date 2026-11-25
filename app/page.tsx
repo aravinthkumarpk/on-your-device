@@ -77,6 +77,16 @@ export default function Page() {
   const answers = messages.filter((m) => m.role === 'assistant').length;
   const showNudge = canUpgrade && !engine.local && answers >= 3 && !nudgeDismissed && !isGenerating;
   const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
+  const nudge = (
+    <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="upgrade-nudge">
+      <Rocket className="size-4 shrink-0" aria-hidden />
+      <span className="flex-1">Want a bigger brain? Connect Ollama in 3 steps.</span>
+      <button type="button" onClick={() => setPanelOpen(true)} className="font-medium text-foreground underline underline-offset-4">Show me</button>
+      <button type="button" onClick={() => setNudgeDismissed(true)} aria-label="Dismiss suggestion" className="rounded p-0.5 hover:text-foreground">
+        <X className="size-4" />
+      </button>
+    </div>
+  );
   const hasAnswer = !!lastAssistant && !isGenerating && engine.phase === 'ready'
     && (lastAssistant.metadata as { engine?: string } | undefined)?.engine !== 'chrome';
 
@@ -180,21 +190,11 @@ export default function Page() {
                 tps={engine.lastTps}
                 isSmall={engine.pick?.key === 'small'}
                 onUseSmall={() => engine.start('small')}
+                nudge={showNudge ? nudge : null}
               />
             )}
 
-            {showNudge && (
-              <div className="mx-auto mt-2 flex w-full max-w-4xl items-center gap-2 px-4" data-testid="upgrade-nudge">
-                <div className="flex flex-1 items-center gap-2 rounded-xl border border-border bg-secondary/40 px-3 py-2 text-sm">
-                  <Rocket className="size-4 shrink-0" aria-hidden />
-                  <span className="flex-1">Want a bigger brain? Connect Ollama in 3 steps.</span>
-                  <button type="button" onClick={() => setPanelOpen(true)} className="font-medium underline underline-offset-4">Show me</button>
-                  <button type="button" onClick={() => setNudgeDismissed(true)} aria-label="Dismiss suggestion" className="rounded p-0.5 text-muted-foreground hover:text-foreground">
-                    <X className="size-4" />
-                  </button>
-                </div>
-              </div>
-            )}
+            {showNudge && !hasAnswer && <div className="mx-auto w-full max-w-4xl px-4">{nudge}</div>}
 
             {error && (
               <p role="alert" className="mx-auto max-w-4xl px-4 pt-2 text-sm text-destructive">

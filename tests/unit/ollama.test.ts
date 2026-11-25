@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
     allowSiteCommand,
+    serveCommand,
     hasModel,
     isSafari,
     listLocalModels,
@@ -73,6 +74,15 @@ describe('allowSiteCommand', () => {
         expect(cmd).toContain(`osascript -e 'quit app "Ollama"'`);
         expect(cmd).toContain('open -a Ollama');
         expect(cmd).not.toContain('\n');
+        expect(cmd).not.toContain('*');
+    });
+});
+
+describe('serveCommand', () => {
+    it('frees the port and serves with only this origin allowed', () => {
+        const cmd = serveCommand('https://onyourdevice.ai');
+        expect(cmd).toContain('brew services stop ollama');
+        expect(cmd).toMatch(/OLLAMA_ORIGINS="https:\/\/onyourdevice\.ai" ollama serve$/);
         expect(cmd).not.toContain('*');
     });
 });

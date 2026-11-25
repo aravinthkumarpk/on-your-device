@@ -50,13 +50,13 @@ export function ChatInputBar({
             <div className="mx-auto max-w-4xl">
                 <PromptInput
                     onSubmit={handleSubmit}
-                    className="rounded-2xl border border-border/40 bg-background/50 backdrop-blur-sm p-2 shadow-sm transition-all focus-within:border-primary/50 focus-within:bg-background/70 focus-within:shadow-md"
+                    className="[&_[data-slot=input-group]]:rounded-2xl [&_[data-slot=input-group]]:bg-background [&_[data-slot=input-group]]:shadow-sm [&_[data-slot=input-group]]:transition-[border-color,box-shadow] [&_[data-slot=input-group]]:duration-150 [&_[data-slot=input-group]:focus-within]:border-foreground/30"
                 >
                     <PromptInputTextarea
                         placeholder={placeholder ?? `Message ${modelLabel}...`}
                         disabled={disabled && !isGenerating}
                         className={cn(
-                            "min-h-[60px] resize-none bg-transparent px-4 py-3",
+                            "min-h-[60px] resize-none bg-transparent px-4 py-3 text-base",
                             disabled && "opacity-50"
                         )}
                     />

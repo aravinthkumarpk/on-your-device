@@ -10,6 +10,7 @@
 
 const params = new URLSearchParams(self.location.search);
 const REPLY = 'Hello from the fake engine. This reply streams one word at a time.';
+const MD_REPLY = "Here are three ways to say thanks.\n\n**Option 1: Warm and direct**\n\n> Thanks a lot! I'm grateful for the chance, and excited to grow the agent studio.\n\n**Option 2: Short**\n\n- Thanks, excited to start.\n- Grateful for this. Let's build.\n\nWant a version with `code`?\n\n```js\nconsole.log('thanks');\n```";
 let interrupted = false;
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -63,7 +64,8 @@ async function generate(id, turns) {
   interrupted = false;
   const last = turns[turns.length - 1]?.content ?? '';
   const slow = last.includes('[slow]');
-  const words = REPLY.split(' ');
+  // [md] replies with markdown, to check how replies render while streaming.
+  const words = (last.includes('[md]') ? MD_REPLY : REPLY).split(' ');
   self.postMessage({ status: 'start', id });
   let answer = '';
   for (let i = 0; i < words.length; i++) {

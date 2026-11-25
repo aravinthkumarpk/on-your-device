@@ -66,6 +66,8 @@ function splitThinking(raw) {
   return { thought: raw.slice(start + 7), answer: raw.slice(0, start) };
 }
 
+const SAMPLING = { do_sample: true, temperature: 0.7, top_p: 0.8, top_k: 20, repetition_penalty: 1.1 };
+
 const stopping_criteria = new InterruptableStoppingCriteria();
 
 async function generate(id, turns) {
@@ -99,7 +101,10 @@ async function generate(id, turns) {
   try {
     await model.generate({
       ...inputs,
-      do_sample: false,
+      // Greedy decoding makes small models loop (the same line five times).
+      // These are the Qwen team's settings for chat with thinking off, plus a
+      // light repetition penalty as transformers.js has no presence penalty.
+      ...SAMPLING,
       max_new_tokens: 1024,
       streamer,
       stopping_criteria,

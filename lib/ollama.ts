@@ -42,6 +42,15 @@ export function allowSiteCommand(origin: string): string {
     return `launchctl setenv OLLAMA_ORIGINS "${origin}" && osascript -e 'quit app "Ollama"' && sleep 2 && open -a Ollama`;
 }
 
+/**
+ * For Ollama started from Terminal or Homebrew, where launchctl doesn't reach:
+ * stop whatever holds the port, then serve with this site allowed. Keep the
+ * Terminal window open while chatting.
+ */
+export function serveCommand(origin: string): string {
+    return `brew services stop ollama 2>/dev/null; pkill ollama; sleep 1; OLLAMA_ORIGINS="${origin}" ollama serve`;
+}
+
 type Fetch = typeof fetch;
 
 /** Chrome 142+ asks the user before a site talks to localhost; this flags the request as such. */

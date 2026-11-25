@@ -7,6 +7,7 @@ import {
     LOCAL_MODELS,
     RAM_CHOICES,
     allowSiteCommand,
+    serveCommand,
     hasModel,
     isSafari,
     listLocalModels,
@@ -166,15 +167,30 @@ export function LocalEnginePanel({
 
                         {step === 'blocked' && (
                             <div className="space-y-3">
-                                <p><span className="font-medium">2. Let this site talk to Ollama.</span> Paste this in Terminal. It also restarts Ollama.</p>
+                                <p className="flex items-center gap-2 text-muted-foreground"><Check className="size-4 text-primary" aria-hidden /> Ollama is running on this Mac.</p>
+                                <p><span className="font-medium">Let this site talk to it.</span> Paste this in Terminal. It also restarts Ollama.</p>
                                 <div className="flex items-start gap-2 rounded-lg border border-border bg-secondary/40 p-2">
                                     <code className="min-w-0 flex-1 select-all whitespace-pre-wrap font-mono text-xs [overflow-wrap:anywhere]" data-testid="allow-command">{command}</code>
                                     <button type="button" onClick={copy} aria-label="Copy command" className="shrink-0 rounded p-1 hover:bg-secondary">
                                         {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
                                     </button>
                                 </div>
-                                <p className="text-muted-foreground">3. If Chrome asks to let this site access devices on your local network, click Allow.</p>
-                                <p className="text-xs text-muted-foreground">You will need to paste it again after a restart.</p>
+                                <p className="text-muted-foreground">If Chrome asks to let this site reach devices on your local network, click Allow. This moves on by itself once it works.</p>
+                                <details className="rounded-lg border border-border p-3" data-testid="ollama-help">
+                                    <summary className="cursor-pointer font-medium">Pasted it and still stuck here?</summary>
+                                    <ul className="mt-2 space-y-2 text-muted-foreground">
+                                        <li>
+                                            <span className="text-foreground">Started Ollama from Terminal or Homebrew?</span> The paste above only reaches the Ollama app. Stop it, then start it with this site allowed:
+                                            <code className="mt-1 block select-all whitespace-pre-wrap rounded bg-secondary/60 p-2 font-mono text-xs [overflow-wrap:anywhere]" data-testid="serve-command">{serveCommand(origin)}</code>
+                                        </li>
+                                        <li>
+                                            <span className="text-foreground">Clicked Block by mistake?</span> Click the icon left of the address bar, open Site settings, and set Local network access to Allow.
+                                        </li>
+                                        <li>
+                                            <span className="text-foreground">Restarted your Mac?</span> The setting resets. Paste the line again.
+                                        </li>
+                                    </ul>
+                                </details>
                             </div>
                         )}
 
