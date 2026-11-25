@@ -56,9 +56,12 @@ test('after a reboot, offers one paste to reconnect', async ({ page }) => {
     await expect(page.getByTestId('reconnect-banner')).toBeVisible();
     await page.getByRole('button', { name: 'Reconnect' }).click();
     await expect(page.getByTestId('allow-command')).toBeVisible();
+    await expect(page.getByText('Ollama is running on this Mac.')).toBeVisible();
+    await page.getByText('Pasted it and still stuck here?').click();
+    await expect(page.getByTestId('serve-command')).toContainText('ollama serve');
 });
 
-test('nudges to a bigger model only after a few answers', async ({ page }) => {
+test('nudges to a bigger model only after a few answers, one tip at a time', async ({ page }) => {
     await fakeOllama(page, 'missing');
     await startFresh(page);
     for (const q of ['one', 'two', 'three']) {
@@ -68,6 +71,10 @@ test('nudges to a bigger model only after a few answers', async ({ page }) => {
         await expect(input(page)).toBeEnabled();
         await expect(page.getByTitle('Stop generating')).toHaveCount(0);
     }
+    // The Wi-Fi tip goes first. The nudge waits until it is dismissed.
+    await expect(page.getByText('Try turning off Wi-Fi')).toBeVisible();
+    await expect(page.getByTestId('upgrade-nudge')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Dismiss tip' }).click();
     await expect(page.getByTestId('upgrade-nudge')).toBeVisible();
     await page.getByRole('button', { name: 'Dismiss suggestion' }).click();
     await expect(page.getByTestId('upgrade-nudge')).toHaveCount(0);

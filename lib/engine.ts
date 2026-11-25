@@ -1,5 +1,6 @@
 import type { UIMessage } from 'ai';
 import type { Dtype } from '@root/lib/models';
+import type { LogEntry, LogKind } from '@root/lib/download-log';
 
 /**
  * Picks the worker script for the chat engine.
@@ -27,7 +28,8 @@ export type WorkerEvent =
     | { status: 'start'; id: string }
     | { status: 'update'; id: string; output: string; thought?: string; tps?: number }
     | { status: 'complete'; id: string; output?: string }
-    | { status: 'error'; id?: string; data: string };
+    | { status: 'error'; id?: string; data: string; kind?: LogKind }
+    | { status: 'log'; entry: LogEntry };
 
 /** The parts of Worker that the engine needs. Lets tests pass a fake. */
 export interface WorkerLike {

@@ -44,3 +44,19 @@ test('a very slow reply offers the smaller model', async ({ page }) => {
     await expect(page.getByText('one word at a time.')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole('button', { name: 'Switch to Qwen3.5 0.8B' })).toBeVisible();
 });
+
+test('replies render markdown without a box and never show raw asterisks', async ({ page }) => {
+    await startFresh(page);
+    await input(page).fill('Help me reply [md]');
+    await input(page).press('Enter');
+    const bold = page.getByText('Option 1: Warm and direct', { exact: true });
+    await expect(bold).toBeVisible();
+    expect(Number(await bold.evaluate((el) => getComputedStyle(el).fontWeight))).toBeGreaterThanOrEqual(600);
+    await expect(page.getByText('**Option')).toHaveCount(0);
+    await expect(page.getByRole('table')).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Tone' })).toBeVisible();
+    await expect(page.getByText('| ---')).toHaveCount(0);
+    const reply = page.locator('.is-assistant').last();
+    const shadow = await reply.locator(':scope > div').first().evaluate((el) => getComputedStyle(el).boxShadow);
+    expect(shadow).toBe('none');
+});

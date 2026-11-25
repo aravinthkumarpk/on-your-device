@@ -169,12 +169,7 @@ export function ChatContainer({
                                         transition={{ duration: 0.3, ease: "easeOut" }}
                                     >
                                         <Message from={message.role}>
-                                            <MessageContent
-                                                className={cn(
-                                                    "shadow-sm",
-                                                    message.role === 'user' && 'bg-primary text-primary-foreground rounded-2xl rounded-tr-sm shadow-md'
-                                                )}
-                                            >
+                                            <MessageContent className={cn(isAssistant && 'w-full max-w-[72ch]')}>
                                                 {isAssistant && message.tools?.map((t) => (
                                                     <ToolCard key={t.callId} tool={t} onApprove={(id, ok) => onToolApproval?.(id, ok)} />
                                                 ))}
@@ -219,7 +214,7 @@ export function ChatContainer({
                                 transition={{ duration: 0.3 }}
                             >
                                 <Message from="assistant">
-                                    <MessageContent className="shadow-sm">
+                                    <MessageContent className="w-full max-w-[72ch]">
                                         {/* Show thinking/reasoning if present */}
                                         {cleanedThought && (
                                             <Reasoning isStreaming={isGenerating}>
@@ -238,13 +233,6 @@ export function ChatContainer({
                                             </div>
                                         )}
 
-                                        {/* Show TPS indicator */}
-                                        {tps !== null && tps > 0 && (
-                                            <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-                                                <Zap className="size-3" />
-                                                <span>{tps.toFixed(1)} tokens/sec</span>
-                                            </div>
-                                        )}
                                     </MessageContent>
 
                                     <MessageToolbar>
@@ -252,11 +240,15 @@ export function ChatContainer({
                                             <MessageAction
                                                 tooltip="Stop generating"
                                                 onClick={onInterrupt}
-                                                variant="outline"
-                                                className="text-destructive hover:text-destructive"
                                             >
                                                 <StopCircleIcon className="size-4" />
                                             </MessageAction>
+                                            {tps !== null && tps > 0 && (
+                                                <span className="flex items-center gap-1 pl-1 text-xs tabular-nums text-muted-foreground">
+                                                    <Zap className="size-3" aria-hidden />
+                                                    {tps.toFixed(0)} tokens/sec
+                                                </span>
+                                            )}
                                         </MessageActions>
                                     </MessageToolbar>
                                 </Message>

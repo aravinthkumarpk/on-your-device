@@ -13,6 +13,7 @@ import {
     type Pick,
 } from '@root/lib/models';
 import { formatEta, summarize, type DownloadSummary, type FileProgress } from '@root/lib/download';
+import { appendLog, type LogEntry, type LogKind } from '@root/lib/download-log';
 import { WorkerChatTransport } from '@root/lib/worker-transport';
 import {
     RoutingTransport,
@@ -76,6 +77,8 @@ export function useEngine(getChats: () => ChatTurn[] = () => []) {
     const [pick, setPick] = useState<Pick | null>(null);
     const [download, setDownload] = useState<DownloadState | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [errorKind, setErrorKind] = useState<LogKind | null>(null);
+    const [log, setLog] = useState<LogEntry[]>([]);
     const [tps, setTps] = useState<number | null>(null);
     const [lastTps, setLastTps] = useState<number | null>(null);
     const [isReturning, setIsReturning] = useState(false);
@@ -99,6 +102,7 @@ export function useEngine(getChats: () => ChatTurn[] = () => []) {
         pickRef.current = chosen;
         setPick(chosen);
         setError(null);
+        setErrorKind(null);
         filesRef.current = {};
         startedAtRef.current = null;
         setDownload({ loadedBytes: 0, totalBytes: chosen.model.downloadGB * 1e9, percent: 0, eta: null, stage: 'Starting download...' });
@@ -147,6 +151,9 @@ export function useEngine(getChats: () => ChatTurn[] = () => []) {
                     }));
                     break;
                 }
+                case 'log':
+                    setLog((l) => appendLog(l, msg.entry));
+                    break;
                 case 'ready':
                     setPhase('ready');
                     setDownload(null);
@@ -157,6 +164,7 @@ export function useEngine(getChats: () => ChatTurn[] = () => []) {
                     if (!('id' in msg) || !msg.id) {
                         setPhase('error');
                         setError(msg.data);
+                        setErrorKind(msg.kind ?? null);
                         setDownload(null);
                     }
                     break;
@@ -273,7 +281,7 @@ export function useEngine(getChats: () => ChatTurn[] = () => []) {
     const bridgeActive = !!bridgeTransport && phase === 'loading';
 
     return {
-        phase, device, suggested, pick, download, error, tps, lastTps, isReturning, start, transport, bridgeActive,
+        phase, device, suggested, pick, download, error, errorKind, log, tps, lastTps, isReturning, start, transport, bridgeActive,
         local, connectLocal, localNeedsReconnect,
     };
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { Cpu, WifiOff, X } from 'lucide-react';
 import { BROWSER_MODELS } from '@root/lib/models';
@@ -24,10 +24,13 @@ export function AfterAnswer({
     tps,
     isSmall,
     onUseSmall,
+    nudge,
 }: {
     tps: number | null;
     isSmall: boolean;
     onUseSmall: () => void;
+    /** Shown only once the Wi-Fi tip is gone, so there's one tip at a time. */
+    nudge?: ReactNode;
 }) {
     const reduce = useReducedMotion();
     const [showTip, setShowTip] = useState(false);
@@ -61,7 +64,7 @@ export function AfterAnswer({
                 </p>
             )}
             {slow && (
-                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-secondary/40 px-3 py-2 text-sm">
+                <div className="flex flex-wrap items-center gap-2 text-sm">
                     <span>Running slowly on this device.</span>
                     <button type="button" onClick={onUseSmall} className="font-medium underline underline-offset-4">
                         Switch to {BROWSER_MODELS.small.label}
@@ -69,7 +72,7 @@ export function AfterAnswer({
                 </div>
             )}
             {showTip && (
-                <div className="flex items-start gap-2 rounded-xl border border-border bg-secondary/40 px-3 py-2 text-sm">
+                <div className="flex items-start gap-2 text-sm text-muted-foreground">
                     <WifiOff className="mt-0.5 size-4 shrink-0" aria-hidden />
                     <span className="flex-1">Try turning off Wi-Fi and asking again. It still works, because nothing leaves your device.</span>
                     <button type="button" onClick={dismissTip} aria-label="Dismiss tip" className="rounded p-0.5 text-muted-foreground hover:text-foreground">
@@ -77,6 +80,7 @@ export function AfterAnswer({
                     </button>
                 </div>
             )}
+            {!showTip && nudge}
         </motion.div>
     );
 }
