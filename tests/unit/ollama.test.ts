@@ -144,6 +144,20 @@ describe('pullModel', () => {
     });
 });
 
+describe('Bonsai sampling', () => {
+    it('sends Qwen no-think settings, never greedy, with min_p 0', async () => {
+        const f = vi.fn(async () => new Response(JSON.stringify({ message: { content: 'ok' }, done: true }) + '\n'));
+        const bonsai = pickLocalModel(16);
+        for await (const d of ollamaStreamer(bonsai.tag, { fetchFn: f as unknown as typeof fetch, sampling: bonsai.sampling })([{ role: 'user', content: 'hi' }])) void d;
+        const body = JSON.parse((f.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+        expect(body).toMatchObject({ think: false, options: { temperature: 0.7, top_p: 0.8, top_k: 20, min_p: 0, presence_penalty: 1.5 } });
+    });
+
+    it('leaves Ollama library models on their own defaults', () => {
+        expect(pickLocalModel(8).sampling).toBeUndefined();
+    });
+});
+
 describe('ollamaStreamer', () => {
     it('streams content with thinking off', async () => {
         const f = vi.fn(async () => streamOf([

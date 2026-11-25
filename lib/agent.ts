@@ -65,7 +65,11 @@ export function makeTools(getChats: () => ChatTurn[], { needsApproval = true }: 
 
 export type LocalTools = ReturnType<typeof makeTools>;
 
-export function createLocalAgent(model: LanguageModel, getChats: () => ChatTurn[], options?: { needsApproval?: boolean }) {
+export function createLocalAgent(
+    model: LanguageModel,
+    getChats: () => ChatTurn[],
+    options?: { needsApproval?: boolean; settings?: { temperature?: number; topP?: number; presencePenalty?: number } },
+) {
     return new ToolLoopAgent({
         model,
         instructions:
@@ -74,6 +78,7 @@ export function createLocalAgent(model: LanguageModel, getChats: () => ChatTurn[
             'Otherwise answer directly. Keep answers short.',
         tools: makeTools(getChats, options),
         stopWhen: stepCountIs(AGENT_MAX_STEPS),
+        ...options?.settings,
     });
 }
 

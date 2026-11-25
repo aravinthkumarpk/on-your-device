@@ -8,6 +8,21 @@ import type { TextStreamer } from '@root/lib/chrome-bridge';
 
 export const OLLAMA_URL = 'http://localhost:11434';
 
+/** Ollama sampling options, named as in its /api/chat `options`. */
+export interface Sampling {
+    temperature?: number;
+    top_p?: number;
+    top_k?: number;
+    min_p?: number;
+    presence_penalty?: number;
+}
+
+/**
+ * Qwen's recommended settings with thinking off. Not temperature 0: low-bit
+ * Qwen models such as Bonsai tend to loop with greedy decoding.
+ */
+export const QWEN_NO_THINK: Sampling = { temperature: 0.7, top_p: 0.8, top_k: 20, min_p: 0, presence_penalty: 1.5 };
+
 export interface LocalModel {
     /** Ollama model tag. Check against ollama.com/library before release. */
     tag: string;
@@ -19,6 +34,11 @@ export interface LocalModel {
     note: string;
     /** Tag of a safer model offered next to this one, for when it does not run well. */
     fallbackTag?: string;
+    /**
+     * Sampling settings sent with every request, for models whose download carries none
+     * (hf.co GGUFs). Ollama library models bring their own.
+     */
+    sampling?: Sampling;
     /** A model the user picked themselves. We don't know if it handles tools, so it gets plain chat. */
     custom?: boolean;
 }
@@ -36,6 +56,7 @@ export const LOCAL_MODELS: LocalModel[] = [
         minRamGB: 16,
         note: 'A 27B model shrunk to fit 16 GB. Smartest pick for this size.',
         fallbackTag: 'qwen3.5:9b',
+        sampling: QWEN_NO_THINK,
     },
     { tag: 'gemma4:26b', label: 'Gemma 4 26B-A4B', downloadGB: 18, minRamGB: 24, note: 'Strong all-rounder, fast because only 4B is active.' },
     { tag: 'inkling-2-mini', label: 'Inkling 2 Mini', downloadGB: 16.5, minRamGB: 32, note: 'Best at code. Fast, 3.4B active.' },
@@ -175,13 +196,16 @@ export async function pullModel(
 }
 
 /** Streams a chat reply from Ollama. Thinking is off, matching the browser models. */
-export function ollamaStreamer(tag: string, { fetchFn = fetch, base = OLLAMA_URL }: { fetchFn?: Fetch; base?: string } = {}): TextStreamer {
+export function ollamaStreamer(
+    tag: string,
+    { fetchFn = fetch, base = OLLAMA_URL, sampling }: { fetchFn?: Fetch; base?: string; sampling?: Sampling } = {},
+): TextStreamer {
     return async function* (turns: ChatTurn[], signal?: AbortSignal) {
         const res = await fetchFn(`${base}/api/chat`, {
             ...loopback,
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: tag, messages: turns, stream: true, think: false }),
+            body: JSON.stringify({ model: tag, messages: turns, stream: true, think: false, ...(sampling ? { options: sampling } : {}) }),
             signal,
         });
         if (!res.ok || !res.body) throw new Error(`Ollama did not answer (HTTP ${res.status}). Is it still running?`);

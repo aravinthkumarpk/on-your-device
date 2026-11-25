@@ -238,12 +238,12 @@ export function useEngine(getChats: () => ChatTurn[] = () => []) {
             return;
         }
         // Plain chat right away; the agent (with tools) loads on demand to keep the first page small.
-        setLocalTransport(new TextStreamerTransport(ollamaStreamer(local.tag), 'ollama'));
+        setLocalTransport(new TextStreamerTransport(ollamaStreamer(local.tag, { sampling: local.sampling }), 'ollama'));
         // Tools only for our own picks, which we know support them.
         if (local.custom) return;
         let cancelled = false;
         import('@root/lib/ollama-agent').then(({ ollamaAgentTransport }) => {
-            if (!cancelled) setLocalTransport(ollamaAgentTransport(local.tag, () => getChatsRef.current()));
+            if (!cancelled) setLocalTransport(ollamaAgentTransport(local.tag, () => getChatsRef.current(), undefined, local.sampling));
         });
         return () => {
             cancelled = true;
