@@ -6,10 +6,21 @@ import {
   Qwen3_5ForConditionalGeneration,
   TextStreamer,
   InterruptableStoppingCriteria,
+  env,
 } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2";
+import { createResumableFetch, classify } from "./resumable-fetch.js";
 
-const DEBUG = false;
-const log = (...args) => DEBUG && console.log("[Worker]", ...args);
+// Download log. Entries go to the page only, which keeps them on this device
+// and shows them under "Details" with a Copy button.
+function log(entry) {
+  self.postMessage({ status: "log", entry: { t: Date.now(), ...entry } });
+}
+
+// Model files come through a fetch that retries and resumes midway.
+env.fetch = createResumableFetch(fetch, log);
+
+self.addEventListener("online", () => log({ level: "info", event: "online", message: "Network came back." }));
+self.addEventListener("offline", () => log({ level: "warn", event: "offline", message: "The browser says it went offline." }));
 
 // Loading follows the official Qwen3.5 WebGPU demo by webml-community.
 // The decoder uses q4f16 when the GPU has shader-f16, else q4.
@@ -99,10 +110,24 @@ async function generate(id, turns) {
   }
 }
 
+function errorKind(error) {
+  const message = error?.message || String(error);
+  if (/memory|OOM|allocation/i.test(message)) return "memory";
+  if (/WebGPU|adapter/i.test(message)) return "gpu";
+  return classify(error);
+}
+
 function friendlyError(error) {
   const message = error?.message || String(error);
   if (/memory|OOM|allocation/i.test(message)) {
     return "Your device ran out of GPU memory. Close other tabs or pick the smaller model.";
+  }
+  const kind = classify(error);
+  if (kind === "storage") {
+    return "Your browser ran out of space for the model. Free up disk space, or pick the smaller model.";
+  }
+  if (kind === "network" || kind === "stall") {
+    return "The download kept dropping, even after several retries. A VPN, firewall or patchy Wi-Fi can do this. Try again: files that already finished are kept.";
   }
   if (/WebGPU|adapter|device/i.test(message)) {
     return "WebGPU stopped working. Refresh the page, or update your browser and GPU drivers.";
@@ -126,20 +151,48 @@ function handleProgress(event) {
   }
 }
 
+async function storageNote() {
+  try {
+    const { usage = 0, quota = 0 } = (await navigator.storage?.estimate?.()) ?? {};
+    return { usedGB: +(usage / 1e9).toFixed(2), quotaGB: +(quota / 1e9).toFixed(2) };
+  } catch {
+    return {};
+  }
+}
+
+// Whole-load retries on top of the per-file ones. Finished files are in the
+// browser cache by then, so a retry only fetches what's missing.
+const LOAD_TRIES = 3;
+
 async function load(modelConfig) {
   self.postMessage({ status: "loading", data: "Checking WebGPU..." });
+  log({ level: "info", event: "load", model: modelConfig?.id, dtype: modelConfig?.dtype, online: navigator.onLine, ...(await storageNote()) });
   try {
     const adapter = await navigator.gpu?.requestAdapter();
     if (!adapter) throw new Error("WebGPU is not available in this browser.");
     self.postMessage({ status: "loading", data: "Downloading the model..." });
-    await loadModel(modelConfig);
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await loadModel(modelConfig);
+        break;
+      } catch (error) {
+        const kind = classify(error);
+        const retry = attempt < LOAD_TRIES && (kind === "network" || kind === "stall" || kind === "http");
+        log({ level: retry ? "warn" : "error", event: "load-failed", kind, attempt, message: String(error?.message ?? error) });
+        if (!retry) throw error;
+        self.postMessage({ status: "loading", data: "The connection dropped. Picking up where it left off..." });
+        await new Promise((r) => setTimeout(r, 3000 * attempt));
+      }
+    }
+    log({ level: "info", event: "loaded", ...(await storageNote()) });
     self.postMessage({ status: "loading", data: "Warming up..." });
     const warm = await processor("a");
     await model.generate({ ...warm, max_new_tokens: 1 });
     self.postMessage({ status: "ready" });
   } catch (error) {
-    log("load failed", error);
-    self.postMessage({ status: "error", data: friendlyError(error) });
+    const kind = errorKind(error);
+    log({ level: "error", event: "gave-up", kind, message: String(error?.message ?? error) });
+    self.postMessage({ status: "error", data: friendlyError(error), kind });
   }
 }
 

@@ -15,9 +15,20 @@ export type TextStreamer = (turns: ChatTurn[], signal?: AbortSignal) => AsyncIte
 
 export const CHROME_LABEL = "Chrome's built-in model";
 
+/**
+ * Chrome warns when a request doesn't say which language it will use, and
+ * checks output safety per language. We ask for English in and out.
+ */
+const LANGUAGES = {
+    expectedInputs: [{ type: 'text', languages: ['en'] }],
+    expectedOutputs: [{ type: 'text', languages: ['en'] }],
+} as const;
+
+type LanguageOptions = typeof LANGUAGES;
+
 interface PromptApi {
-    availability(): Promise<'unavailable' | 'downloadable' | 'downloading' | 'available'>;
-    create(options: {
+    availability(options?: LanguageOptions): Promise<'unavailable' | 'downloadable' | 'downloading' | 'available'>;
+    create(options: LanguageOptions & {
         initialPrompts?: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
         signal?: AbortSignal;
     }): Promise<{
@@ -36,7 +47,7 @@ export async function isChromeModelReady(): Promise<boolean> {
     const api = promptApi();
     if (!api) return false;
     try {
-        return (await api.availability()) === 'available';
+        return (await api.availability(LANGUAGES)) === 'available';
     } catch {
         return false;
     }
@@ -48,7 +59,7 @@ export const chromeStreamer: TextStreamer = async function* (turns, signal) {
     if (!api) throw new Error("Chrome's built-in model is not available.");
     const history = turns.slice(0, -1);
     const last = turns[turns.length - 1];
-    const session = await api.create({ initialPrompts: history, signal });
+    const session = await api.create({ ...LANGUAGES, initialPrompts: history, signal });
     try {
         const stream = session.promptStreaming(last?.content ?? '', { signal });
         const reader = stream.getReader();

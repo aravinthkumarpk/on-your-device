@@ -3,6 +3,8 @@
 import { AlertTriangle, MonitorX } from 'lucide-react';
 import { BROWSER_MODELS, type BrowserModelKey } from '@root/lib/models';
 import { formatBytes } from '@root/lib/download';
+import type { LogEntry, LogKind } from '@root/lib/download-log';
+import { DownloadLog } from '@components/DownloadLog';
 
 /** No WebGPU: nothing can run, so say why and where it will work. */
 export function Unsupported() {
@@ -33,12 +35,25 @@ export function LoadError({
     message,
     current,
     onRetry,
+    kind,
+    log = [],
+    logMeta,
 }: {
     message: string;
     current: BrowserModelKey | undefined;
     onRetry: (key: BrowserModelKey) => void;
+    kind?: LogKind | null;
+    log?: LogEntry[];
+    logMeta?: Record<string, unknown>;
 }) {
-    const canShrink = current !== undefined && current !== 'small';
+    // A dropped connection isn't the model's fault, so don't suggest a smaller one first.
+    const network = kind === 'network' || kind === 'stall' || kind === 'http';
+    const canShrink = !network && current !== undefined && current !== 'small';
+    const heading = network
+        ? 'The download keeps getting cut off'
+        : kind === 'storage'
+            ? 'Not enough space for the model'
+            : canShrink ? 'That model was too much for this device' : 'The model could not load';
     const small = BROWSER_MODELS.small;
     return (
         <section role="alert" className="mx-auto w-full max-w-xl px-4 pt-8">
@@ -46,7 +61,7 @@ export function LoadError({
                 <div className="flex gap-3">
                     <AlertTriangle className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden />
                     <div>
-                        <h2 className="font-medium">{canShrink ? 'That model was too much for this device' : 'The model could not load'}</h2>
+                        <h2 className="font-medium">{heading}</h2>
                         <p className="mt-1 text-sm text-muted-foreground">{message}</p>
                         <div className="mt-4 flex flex-wrap gap-2">
                             {canShrink && (
@@ -62,12 +77,13 @@ export function LoadError({
                                 <button
                                     type="button"
                                     onClick={() => onRetry(current)}
-                                    className="rounded-lg border border-border px-4 py-2 text-sm transition-transform duration-150 ease-out active:scale-[0.97]"
+                                    className={`rounded-lg px-4 py-2 text-sm transition-transform duration-150 ease-out active:scale-[0.97] ${canShrink ? 'border border-border' : 'bg-primary text-primary-foreground'}`}
                                 >
                                     Try again
                                 </button>
                             )}
                         </div>
+                        <DownloadLog log={log} meta={logMeta} open={network} />
                     </div>
                 </div>
             </div>

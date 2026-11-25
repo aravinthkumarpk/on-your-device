@@ -92,3 +92,30 @@ test('no sideways scrolling on a 320px phone, even with a long unbroken URL', as
     await expect(page.getByText('one word at a time.')).toBeVisible();
     await noOverflow();
 });
+
+test('a dropped connection resumes, and the log says so', async ({ page }) => {
+    await page.goto('/?engine=fake&flaky=1&slowload=1');
+    await page.getByRole('button', { name: /^Start with/ }).click();
+    const details = page.getByTestId('download-log');
+    await expect(details.getByText(/1 hiccup, handled automatically/)).toBeVisible();
+    await details.getByText('Details').click();
+    await expect(details.getByText(/dropped 1 time midway and resumed 1/)).toBeVisible();
+    await expect(details.getByText('This log stays on your device. Nothing is sent anywhere.')).toBeVisible();
+    await expect(input(page)).toBeEnabled({ timeout: 15000 });
+});
+
+test('a download that keeps dropping blames the network, not the device, and copies the log', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.goto('/?engine=fake&fail=network');
+    await page.getByRole('button', { name: /^Start with/ }).click();
+    await expect(page.getByRole('heading', { name: 'The download keeps getting cut off' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /instead/ })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Copy logs' }).click();
+    await expect(page.getByRole('button', { name: 'Copied' })).toBeVisible();
+    const copied = await page.evaluate(() => navigator.clipboard.readText());
+    expect(copied).toContain('OnYourDevice download log');
+    expect(copied).toContain('Likely cause: The connection dropped 6 times midway');
+    expect(copied).toMatch(/dropped decoder\.onnx at 20\.0 MB of 50\.0 MB \(connection dropped, try 1, huggingface\.co\)/);
+});

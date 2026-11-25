@@ -50,25 +50,42 @@ export function LocalEnginePanel({
         setSafari(isSafari(navigator.userAgent));
     }, []);
 
-    // Watch for Ollama every 2 seconds while the panel is open and not yet connected.
+    // Watch for Ollama while the panel is open and not yet connected. Checks
+    // start every 2 seconds and slow down to every 15, so a closed port doesn't
+    // flood the console. Coming back to the tab checks right away, which is
+    // when someone has just installed or opened Ollama.
     useEffect(() => {
         if (!open || step === 'pick' || step === 'pulling') return;
         let stopped = false;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        let delay = 2000;
         const check = async () => {
+            clearTimeout(timer);
+            if (document.visibilityState === 'hidden') return;
             const state: OllamaState = await probeOllama();
             if (stopped) return;
             if (state === 'ready') {
                 setInstalled(await listLocalModels().catch(() => []));
                 setStep('pick');
-            } else if (step !== 'failed') {
-                setStep(state);
+                return;
             }
+            if (step !== 'failed') setStep(state);
+            timer = setTimeout(check, delay);
+            delay = Math.min(delay * 1.5, 15000);
+        };
+        const onReturn = () => {
+            if (document.visibilityState !== 'visible') return;
+            delay = 2000;
+            check();
         };
         check();
-        const timer = setInterval(check, 2000);
+        document.addEventListener('visibilitychange', onReturn);
+        window.addEventListener('focus', onReturn);
         return () => {
             stopped = true;
-            clearInterval(timer);
+            clearTimeout(timer);
+            document.removeEventListener('visibilitychange', onReturn);
+            window.removeEventListener('focus', onReturn);
         };
     }, [open, step]);
 

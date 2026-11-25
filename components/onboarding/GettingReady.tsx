@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { formatBytes } from '@root/lib/download';
 import type { DownloadState } from '@root/app/hooks/useEngine';
+import type { LogEntry } from '@root/lib/download-log';
+import { DownloadLog } from '@components/DownloadLog';
 import { EASE_OUT } from './motion';
 
 const TIPS = [
@@ -18,11 +20,15 @@ export function GettingReady({
     download,
     queued,
     isReturning,
+    log = [],
+    logMeta,
 }: {
     modelLabel: string;
     download: DownloadState;
     queued: string | null;
     isReturning: boolean;
+    log?: LogEntry[];
+    logMeta?: Record<string, unknown>;
 }) {
     const reduce = useReducedMotion();
     const [tip, setTip] = useState(0);
@@ -61,6 +67,8 @@ export function GettingReady({
                         ? `${formatBytes(download.loadedBytes)} of ${formatBytes(download.totalBytes)}${download.eta ? `, ${download.eta}` : ''}`
                         : download.stage}
                 </p>
+
+                <DownloadLog log={log} meta={logMeta} />
 
                 <div className="mt-5 min-h-[4.5rem] border-t border-border/50 pt-4">
                     <AnimatePresence mode="wait" initial={false}>

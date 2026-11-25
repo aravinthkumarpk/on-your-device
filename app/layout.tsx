@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     description: 'Run AI models locally in your browser with WebGPU. Zero installation, instant AI chat.',
   },
   icons: {
-    icon: '/favicon.ico',
+    icon: '/favicon.svg',
   },
 };
 

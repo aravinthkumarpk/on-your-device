@@ -67,6 +67,11 @@ export default function Page() {
   }, [stop, setMessages]);
 
   const modelLabel = engine.local?.label ?? engine.pick?.model.label;
+  const logMeta = {
+    model: engine.pick ? `${engine.pick.model.id} (${engine.pick.dtype})` : undefined,
+    browser: typeof navigator === 'undefined' ? undefined : navigator.userAgent,
+    online: typeof navigator === 'undefined' ? undefined : navigator.onLine,
+  };
   const canType = !!engine.local || engine.phase === 'ready' || engine.bridgeActive || (engine.phase === 'loading' && !queued);
   const canUpgrade = !engine.device?.isMobile && (engine.phase === 'ready' || engine.phase === 'loading');
   const answers = messages.filter((m) => m.role === 'assistant').length;
@@ -142,10 +147,10 @@ export default function Page() {
         {(engine.phase === 'loading' || engine.phase === 'ready' || engine.phase === 'error') && (
           <>
             {engine.phase === 'loading' && engine.download && modelLabel && (messages.length === 0 || engine.bridgeActive) && (
-              <GettingReady modelLabel={modelLabel} download={engine.download} queued={queued} isReturning={engine.isReturning} />
+              <GettingReady modelLabel={modelLabel} download={engine.download} queued={queued} isReturning={engine.isReturning} log={engine.log} logMeta={logMeta} />
             )}
             {engine.phase === 'error' && (
-              <LoadError message={engine.error ?? 'Something went wrong.'} current={engine.pick?.key} onRetry={engine.start} />
+              <LoadError message={engine.error ?? 'Something went wrong.'} current={engine.pick?.key} onRetry={engine.start} kind={engine.errorKind} log={engine.log} logMeta={logMeta} />
             )}
 
             {engine.bridgeActive && (
