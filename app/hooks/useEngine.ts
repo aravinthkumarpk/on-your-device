@@ -22,7 +22,7 @@ import {
     isChromeModelReady,
     type TextStreamer,
 } from '@root/lib/chrome-bridge';
-import { LOCAL_MODELS, hasModel, listLocalModels, ollamaStreamer, probeOllama, type LocalModel } from '@root/lib/ollama';
+import { hasModel, listLocalModels, localModelFor, ollamaStreamer, probeOllama, type LocalModel } from '@root/lib/ollama';
 
 /**
  * checking    detecting the device
@@ -174,7 +174,7 @@ export function useEngine(getChats: () => ChatTurn[] = () => []) {
         } catch {
             savedLocal = null;
         }
-        const savedModel = LOCAL_MODELS.find((m) => m.tag === savedLocal);
+        const savedModel = savedLocal ? localModelFor(savedLocal) : null;
         if (savedModel) {
             probeOllama().then(async (state) => {
                 if (cancelled) return;
@@ -238,10 +238,12 @@ export function useEngine(getChats: () => ChatTurn[] = () => []) {
             return;
         }
         // Plain chat right away; the agent (with tools) loads on demand to keep the first page small.
-        setLocalTransport(new TextStreamerTransport(ollamaStreamer(local.tag), 'ollama'));
+        setLocalTransport(new TextStreamerTransport(ollamaStreamer(local.tag, { sampling: local.sampling }), 'ollama'));
+        // Tools only for our own picks, which we know support them.
+        if (local.custom) return;
         let cancelled = false;
         import('@root/lib/ollama-agent').then(({ ollamaAgentTransport }) => {
-            if (!cancelled) setLocalTransport(ollamaAgentTransport(local.tag, () => getChatsRef.current()));
+            if (!cancelled) setLocalTransport(ollamaAgentTransport(local.tag, () => getChatsRef.current(), undefined, local.sampling));
         });
         return () => {
             cancelled = true;

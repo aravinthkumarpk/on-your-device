@@ -8,6 +8,21 @@ import type { TextStreamer } from '@root/lib/chrome-bridge';
 
 export const OLLAMA_URL = 'http://localhost:11434';
 
+/** Ollama sampling options, named as in its /api/chat `options`. */
+export interface Sampling {
+    temperature?: number;
+    top_p?: number;
+    top_k?: number;
+    min_p?: number;
+    presence_penalty?: number;
+}
+
+/**
+ * Qwen's recommended settings with thinking off. Not temperature 0: low-bit
+ * Qwen models such as Bonsai tend to loop with greedy decoding.
+ */
+export const QWEN_NO_THINK: Sampling = { temperature: 0.7, top_p: 0.8, top_k: 20, min_p: 0, presence_penalty: 1.5 };
+
 export interface LocalModel {
     /** Ollama model tag. Check against ollama.com/library before release. */
     tag: string;
@@ -17,24 +32,66 @@ export interface LocalModel {
     /** Smallest Mac memory it is suggested for. */
     minRamGB: number;
     note: string;
+    /** Tag of a safer model offered next to this one, for when it does not run well. */
+    fallbackTag?: string;
+    /**
+     * Sampling settings sent with every request, for models whose download carries none
+     * (hf.co GGUFs). Ollama library models bring their own.
+     */
+    sampling?: Sampling;
+    /** A model the user picked themselves. We don't know if it handles tools, so it gets plain chat. */
+    custom?: boolean;
 }
 
 /** One pick per Mac memory size, from the agreed model-per-device table. */
 export const LOCAL_MODELS: LocalModel[] = [
     { tag: 'qwen3.5:4b', label: 'Qwen3.5 4B', downloadGB: 3.4, minRamGB: 8, note: 'Best that fits 8 GB.' },
-    { tag: 'qwen3.5:9b', label: 'Qwen3.5 9B', downloadGB: 6.6, minRamGB: 16, note: 'Top of the small class.' },
+    { tag: 'qwen3.5:9b', label: 'Qwen3.5 9B', downloadGB: 6.6, minRamGB: 16, note: 'Well tested and steady.' },
+    // Qwen3.8 27B squeezed to about 2 bits. The Q2_0 file runs on stock llama.cpp b11556+;
+    // older builds load it but print gibberish, so the 9B stays one click away.
+    {
+        tag: 'hf.co/prism-ml/Ternary-Bonsai-2.5-27B-GGUF:Q2_0',
+        label: 'Bonsai 2.5 27B',
+        downloadGB: 7.6,
+        minRamGB: 16,
+        note: 'A 27B model shrunk to fit 16 GB. Smartest pick for this size.',
+        fallbackTag: 'qwen3.5:9b',
+        sampling: QWEN_NO_THINK,
+    },
     { tag: 'gemma4:26b', label: 'Gemma 4 26B-A4B', downloadGB: 18, minRamGB: 24, note: 'Strong all-rounder, fast because only 4B is active.' },
     { tag: 'inkling-2-mini', label: 'Inkling 2 Mini', downloadGB: 16.5, minRamGB: 32, note: 'Best at code. Fast, 3.4B active.' },
-    { tag: 'qwen3.8:27b', label: 'Qwen3.8 27B', downloadGB: 17.1, minRamGB: 48, note: 'Most factual. Slower without a drafter.' },
+    { tag: 'qwen3.6:35b-a3b', label: 'Qwen3.6 35B-A3B', downloadGB: 23, minRamGB: 48, note: 'Much faster, only 3B active. Top of an independent small-model test.' },
+    { tag: 'qwen3.8:27b', label: 'Qwen3.8 27B', downloadGB: 17.1, minRamGB: 48, note: 'Most factual. Slower without a drafter.', fallbackTag: 'qwen3.6:35b-a3b' },
 ];
 
 export const RAM_CHOICES = [8, 16, 24, 32, 48] as const;
 
-/** The suggested local model for a Mac with this much memory. */
+/** The suggested local model for a Mac with this much memory. The last match in the list wins. */
 export function pickLocalModel(ramGB: number): LocalModel {
     let best = LOCAL_MODELS[0];
     for (const m of LOCAL_MODELS) if (ramGB >= m.minRamGB) best = m;
     return best;
+}
+
+/** True for a plausible Ollama tag, like "qwen3.6:35b-a3b" or "hf.co/org/repo:Q4_K_M". */
+export function isOllamaTag(tag: string): boolean {
+    return tag.length <= 200 && /^[a-z0-9][a-z0-9._-]*(\/[a-z0-9._-]+)*(:[a-z0-9._-]+)?$/i.test(tag);
+}
+
+/** Our entry for a tag, or a plain "your choice" entry for any other model. */
+export function localModelFor(tag: string): LocalModel {
+    const known = LOCAL_MODELS.find((m) => hasModel([m.tag], tag) || m.tag.toLowerCase() === tag.toLowerCase());
+    return known ?? { tag, label: tag, downloadGB: 0, minRamGB: 0, note: 'Your choice.', custom: true };
+}
+
+/** The safer model offered next to `model`, if it has one. */
+export function fallbackFor(model: LocalModel): LocalModel | undefined {
+    return model.fallbackTag ? LOCAL_MODELS.find((m) => m.tag === model.fallbackTag) : undefined;
+}
+
+/** One model per memory size, as the panel suggests them. */
+export function suggestedModels(): LocalModel[] {
+    return LOCAL_MODELS.filter((m) => pickLocalModel(m.minRamGB) === m);
 }
 
 /** The one line that lets this site talk to Ollama and restarts it. Resets on reboot. */
@@ -79,8 +136,10 @@ export async function listLocalModels(fetchFn: Fetch = fetch, base = OLLAMA_URL)
 
 /** True if `tag` (like "qwen3.5:9b" or "inkling-2-mini") is already pulled. */
 export function hasModel(installed: string[], tag: string): boolean {
-    const full = tag.includes(':') ? tag : `${tag}:latest`;
-    return installed.includes(full) || installed.includes(tag);
+    // Ollama may change the case of hf.co tags, so compare without it.
+    const full = (tag.includes(':') ? tag : `${tag}:latest`).toLowerCase();
+    const names = installed.map((n) => n.toLowerCase());
+    return names.includes(full) || names.includes(tag.toLowerCase());
 }
 
 /** Reads newline-delimited JSON from a streaming response. */
@@ -137,13 +196,16 @@ export async function pullModel(
 }
 
 /** Streams a chat reply from Ollama. Thinking is off, matching the browser models. */
-export function ollamaStreamer(tag: string, { fetchFn = fetch, base = OLLAMA_URL }: { fetchFn?: Fetch; base?: string } = {}): TextStreamer {
+export function ollamaStreamer(
+    tag: string,
+    { fetchFn = fetch, base = OLLAMA_URL, sampling }: { fetchFn?: Fetch; base?: string; sampling?: Sampling } = {},
+): TextStreamer {
     return async function* (turns: ChatTurn[], signal?: AbortSignal) {
         const res = await fetchFn(`${base}/api/chat`, {
             ...loopback,
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: tag, messages: turns, stream: true, think: false }),
+            body: JSON.stringify({ model: tag, messages: turns, stream: true, think: false, ...(sampling ? { options: sampling } : {}) }),
             signal,
         });
         if (!res.ok || !res.body) throw new Error(`Ollama did not answer (HTTP ${res.status}). Is it still running?`);
