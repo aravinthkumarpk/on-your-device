@@ -53,6 +53,9 @@ test('replies render markdown without a box and never show raw asterisks', async
     await expect(bold).toBeVisible();
     expect(Number(await bold.evaluate((el) => getComputedStyle(el).fontWeight))).toBeGreaterThanOrEqual(600);
     await expect(page.getByText('**Option')).toHaveCount(0);
+    await expect(page.getByRole('table')).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Tone' })).toBeVisible();
+    await expect(page.getByText('| ---')).toHaveCount(0);
     const reply = page.locator('.is-assistant').last();
     const shadow = await reply.locator(':scope > div').first().evaluate((el) => getComputedStyle(el).boxShadow);
     expect(shadow).toBe('none');

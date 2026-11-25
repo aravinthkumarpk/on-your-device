@@ -10,7 +10,7 @@
 
 const params = new URLSearchParams(self.location.search);
 const REPLY = 'Hello from the fake engine. This reply streams one word at a time.';
-const MD_REPLY = "Here are three ways to say thanks.\n\n**Option 1: Warm and direct**\n\n> Thanks a lot! I'm grateful for the chance, and excited to grow the agent studio.\n\n**Option 2: Short**\n\n- Thanks, excited to start.\n- Grateful for this. Let's build.\n\nWant a version with `code`?\n\n```js\nconsole.log('thanks');\n```";
+const MD_REPLY = "Here are three ways to say thanks.\n\n**Option 1: Warm and direct**\n\n> Thanks a lot! I'm grateful for the chance, and excited to grow the agent studio.\n\n**Option 2: Short**\n\n- Thanks, excited to start.\n- Grateful for this. Let's build.\n\n| Option | Tone | Length |\n| --- | --- | --- |\n| 1 | Warm | Medium |\n| 2 | Short | Short |\n\nWant a version with `code`?\n\n```js\nconsole.log('thanks');\n```";
 let interrupted = false;
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
