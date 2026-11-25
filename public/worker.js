@@ -165,6 +165,21 @@ async function storageNote() {
   }
 }
 
+// When requests fail before any data, tell "can't reach the server at all"
+// apart from "reached something that answered, but not with the file".
+// A no-cors request succeeds whenever anything answers, even a block page.
+async function probeHost() {
+  const host = "https://huggingface.co";
+  try {
+    await fetch(`${host}/favicon.ico`, { mode: "no-cors", cache: "no-store" });
+    log({ level: "warn", event: "probe", host: "huggingface.co", reachable: true,
+      message: "Something answers at huggingface.co, but file requests fail. A VPN, proxy or company firewall may be answering in its place." });
+  } catch (error) {
+    log({ level: "warn", event: "probe", host: "huggingface.co", reachable: false,
+      message: "huggingface.co can't be reached at all from this browser. A VPN, firewall or content blocker is stopping it." });
+  }
+}
+
 // Whole-load retries on top of the per-file ones. Finished files are in the
 // browser cache by then, so a retry only fetches what's missing.
 const LOAD_TRIES = 3;
@@ -182,6 +197,7 @@ async function load(modelConfig) {
         break;
       } catch (error) {
         const kind = classify(error);
+        if (attempt === 1 && kind === "network") await probeHost();
         const retry = attempt < LOAD_TRIES && (kind === "network" || kind === "stall" || kind === "http");
         log({ level: retry ? "warn" : "error", event: "load-failed", kind, attempt, message: String(error?.message ?? error) });
         if (!retry) throw error;

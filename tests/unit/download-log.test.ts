@@ -27,6 +27,12 @@ describe('download log', () => {
         expect(diagnose([{ t, level: 'error', event: 'request-failed', kind: 'network' }])).toMatch(/blocking huggingface.co/);
     });
 
+    it('uses the reachability probe to say which kind of block', () => {
+        const failed: LogEntry = { t, level: 'error', event: 'request-failed', kind: 'network' };
+        expect(diagnose([failed, { t, level: 'warn', event: 'probe', reachable: true }])).toMatch(/answering in its place/);
+        expect(diagnose([failed, { t, level: 'warn', event: 'probe', reachable: false }])).toMatch(/cannot be reached/);
+    });
+
     it('says nothing when all went well', () => {
         expect(diagnose([{ t, level: 'info', event: 'done' }])).toBeNull();
     });

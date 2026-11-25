@@ -81,6 +81,13 @@ export function diagnose(log: LogEntry[]): string | null {
     if (midway > 0 || stalls > 0) {
         return `The connection dropped ${drops.length} time${drops.length === 1 ? '' : 's'} midway${resumed ? ` and resumed ${resumed}` : ''}. That pattern points to the network path, like a VPN, proxy or patchy Wi-Fi, not to this device.`;
     }
+    const probe = log.find((e) => e.event === 'probe');
+    if (probe?.reachable === true) {
+        return 'huggingface.co answers, but every file request fails. That usually means a VPN, proxy or company firewall is answering in its place. Try with the VPN off.';
+    }
+    if (probe?.reachable === false) {
+        return 'huggingface.co cannot be reached from this browser at all. A VPN, firewall or content blocker is stopping it. Try with the VPN off, or another network.';
+    }
     return 'Requests to the model server failed before any data arrived. A VPN, firewall or content blocker may be blocking huggingface.co.';
 }
 
