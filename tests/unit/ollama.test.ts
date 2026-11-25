@@ -6,6 +6,8 @@ import {
     listLocalModels,
     ollamaStreamer,
     fallbackFor,
+    isOllamaTag,
+    localModelFor,
     pickLocalModel,
     suggestedModels,
     probeOllama,
@@ -70,6 +72,19 @@ describe('Bonsai 2.5 27B on 16 GB Macs', () => {
 
     it('finds hf.co models whatever case Ollama reports them in', () => {
         expect(hasModel(['hf.co/prism-ml/ternary-bonsai-2.5-27b-gguf:Q2_0'], 'hf.co/prism-ml/Ternary-Bonsai-2.5-27B-GGUF:Q2_0')).toBe(true);
+    });
+});
+
+describe('models people pick themselves', () => {
+    it('accepts real Ollama tags and rejects junk', () => {
+        for (const t of ['qwen3.6:35b-a3b', 'llama3', 'hf.co/AtomicChat/Some-Model-GGUF:Q2_0', 'user/model:latest']) expect(isOllamaTag(t)).toBe(true);
+        for (const t of ['', 'rm -rf /', 'a b', 'x;y', '../etc', 'http://evil', 'a'.repeat(201)]) expect(isOllamaTag(t)).toBe(false);
+    });
+
+    it('keeps our label for known tags and marks others as custom', () => {
+        expect(localModelFor('qwen3.5:9b')).toMatchObject({ label: 'Qwen3.5 9B' });
+        expect(localModelFor('qwen3.5:9b').custom).toBeUndefined();
+        expect(localModelFor('mistral:7b')).toMatchObject({ tag: 'mistral:7b', label: 'mistral:7b', custom: true });
     });
 });
 

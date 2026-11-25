@@ -10,6 +10,8 @@ import {
     isSafari,
     listLocalModels,
     fallbackFor,
+    isOllamaTag,
+    localModelFor,
     pickLocalModel,
     suggestedModels,
     probeOllama,
@@ -42,6 +44,7 @@ export function LocalEnginePanel({
     const [progress, setProgress] = useState<{ completed: number; total: number; status: string } | null>(null);
     const [failure, setFailure] = useState<string | null>(null);
     const [chosen, setChosen] = useState<LocalModel | null>(null);
+    const [customTag, setCustomTag] = useState('');
     const [copied, setCopied] = useState(false);
     const [origin, setOrigin] = useState('');
     const [safari, setSafari] = useState(false);
@@ -89,6 +92,8 @@ export function LocalEnginePanel({
 
     const model = ram ? pickLocalModel(ram) : null;
     const fallback = model ? fallbackFor(model) : undefined;
+    const others = installed.filter((t) => !(model && hasModel([t], model.tag)) && !(fallback && hasModel([t], fallback.tag)));
+    const tag = customTag.trim();
 
     const download = async (m: LocalModel) => {
         if (hasModel(installed, m.tag)) {
@@ -211,6 +216,39 @@ export function LocalEnginePanel({
                                             : `Or download ${fallback.label} (${formatBytes(fallback.downloadGB * 1e9)}). ${fallback.note}`}
                                     </button>
                                 )}
+                                <details className="rounded-lg border border-border/60 px-3 py-2">
+                                    <summary className="cursor-pointer text-muted-foreground">Pick a different model</summary>
+                                    <div className="mt-2 space-y-2">
+                                        {others.length > 0 && (
+                                            <div className="flex flex-wrap gap-2" aria-label="Models already on this Mac">
+                                                {others.map((t) => (
+                                                    <button key={t} type="button" onClick={() => download(localModelFor(t))} className="rounded-full border border-border px-3 py-1 hover:bg-secondary/50">
+                                                        Use {t}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <form
+                                            className="flex gap-2"
+                                            onSubmit={(e) => {
+                                                e.preventDefault();
+                                                if (isOllamaTag(tag)) download(localModelFor(tag));
+                                            }}
+                                        >
+                                            <input
+                                                value={customTag}
+                                                onChange={(e) => setCustomTag(e.target.value)}
+                                                placeholder="Any Ollama model, like qwen3.6:35b-a3b"
+                                                aria-label="Ollama model name"
+                                                className="min-w-0 flex-1 rounded-lg border border-border bg-background px-2 py-1.5"
+                                            />
+                                            <button type="submit" disabled={!isOllamaTag(tag)} className="rounded-lg border border-border px-3 py-1.5 disabled:opacity-50">
+                                                Get
+                                            </button>
+                                        </form>
+                                        <p className="text-xs text-muted-foreground">Models you pick yourself get plain chat, without tools. We haven&apos;t tested them.</p>
+                                    </div>
+                                </details>
                             </div>
                         )}
 

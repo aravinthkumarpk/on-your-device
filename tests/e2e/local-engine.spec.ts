@@ -59,6 +59,30 @@ test('a 16 GB Mac gets Bonsai 2.5 27B from Hugging Face, with Qwen3.5 9B offered
     expect(ollama.pulled).toContain('hf.co/prism-ml/Ternary-Bonsai-2.5-27B-GGUF:Q2_0');
 });
 
+test('people can pick any other Ollama model, which gets plain chat', async ({ page }) => {
+    const ollama = await fakeOllama(page, 'ready', ['mistral:7b']);
+    await startFresh(page);
+    await page.getByRole('button', { name: 'Bigger model' }).click();
+    await page.getByRole('radio', { name: '16 GB' }).click();
+    await page.getByText('Pick a different model').click();
+    await expect(page.getByRole('button', { name: 'Use mistral:7b' })).toBeVisible();
+
+    // A tag typed by hand is pulled, then used.
+    await expect(page.getByRole('button', { name: 'Get' })).toBeDisabled();
+    await page.getByRole('textbox', { name: 'Ollama model name' }).fill('hf.co/someone/Model-GGUF:Q4_K_M');
+    await page.getByRole('button', { name: 'Get' }).click();
+    await expect(page.getByTestId('model-chip')).toContainText('hf.co/someone/Model-GGUF:Q4_K_M (Ollama)', { timeout: 5_000 });
+    expect(ollama.pulled).toContain('hf.co/someone/Model-GGUF:Q4_K_M');
+
+    await input(page).fill('Hi');
+    await input(page).press('Enter');
+    await expect(page.getByText('Hello from Ollama.')).toBeVisible();
+
+    // Comes back after a reload.
+    await page.reload();
+    await expect(page.getByTestId('model-chip')).toContainText('hf.co/someone/Model-GGUF:Q4_K_M (Ollama)');
+});
+
 test('after a reboot, offers one paste to reconnect', async ({ page }) => {
     await fakeOllama(page, 'blocked');
     await startFresh(page);

@@ -19,6 +19,8 @@ export interface LocalModel {
     note: string;
     /** Tag of a safer model offered next to this one, for when it does not run well. */
     fallbackTag?: string;
+    /** A model the user picked themselves. We don't know if it handles tools, so it gets plain chat. */
+    custom?: boolean;
 }
 
 /** One pick per Mac memory size, from the agreed model-per-device table. */
@@ -48,6 +50,17 @@ export function pickLocalModel(ramGB: number): LocalModel {
     let best = LOCAL_MODELS[0];
     for (const m of LOCAL_MODELS) if (ramGB >= m.minRamGB) best = m;
     return best;
+}
+
+/** True for a plausible Ollama tag, like "qwen3.6:35b-a3b" or "hf.co/org/repo:Q4_K_M". */
+export function isOllamaTag(tag: string): boolean {
+    return tag.length <= 200 && /^[a-z0-9][a-z0-9._-]*(\/[a-z0-9._-]+)*(:[a-z0-9._-]+)?$/i.test(tag);
+}
+
+/** Our entry for a tag, or a plain "your choice" entry for any other model. */
+export function localModelFor(tag: string): LocalModel {
+    const known = LOCAL_MODELS.find((m) => hasModel([m.tag], tag) || m.tag.toLowerCase() === tag.toLowerCase());
+    return known ?? { tag, label: tag, downloadGB: 0, minRamGB: 0, note: 'Your choice.', custom: true };
 }
 
 /** The safer model offered next to `model`, if it has one. */
